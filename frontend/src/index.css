@@ -84,9 +84,6 @@ legend { font-weight: 680; margin-bottom: .55rem; }
 .button-arrow:hover span { transform: rotate(-14deg); }
 
 .public-content { width: 100%; max-width: 1360px; margin-inline: auto; padding-inline: clamp(1.2rem, 5.1vw, 5rem); }
-@media (min-width: 1024px) {
-  .landing-page > .public-content { max-width: 1560px; padding-inline: clamp(2rem, 4vw, 4rem); }
-}
 .public-section { padding-block: clamp(2.55rem, 5.8vw, 5.3rem); border-bottom: 1px solid var(--line); scroll-margin-top: 4.45rem; }
 .public-section:last-child { border-bottom: 0; }
 .public-section-head { display: grid; grid-template-columns: 1fr 1fr; align-items: end; gap: .65rem 2rem; margin-bottom: clamp(1.3rem, 3.2vw, 2.6rem); }
