@@ -10,7 +10,7 @@ test('moves through all three walkthrough steps in the same stage and shows the 
   await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link', { name: 'How it works' }).click();
 
   const section = page.getByRole('region', { name: 'How it works' });
-  await expect(section.getByRole('heading', { name: 'Upload your résumé and add a role' })).toBeInViewport();
+  await expect(section.getByRole('heading', { name: 'Set up and analyze your interview' })).toBeInViewport();
   const runway = section.locator('.walkthrough-runway');
   const stage = section.locator('.walkthrough-stage');
   const scrollToStep = (ratio: number) => runway.evaluate((track, progress) => {
@@ -20,12 +20,12 @@ test('moves through all three walkthrough steps in the same stage and shows the 
   }, ratio);
 
   await scrollToStep(.5);
-  await expect(section.getByRole('heading', { name: 'Answer the AI’s questions aloud' })).toBeInViewport();
+  await expect(section.getByRole('heading', { name: 'Practice a conversation with Sadhana' })).toBeInViewport();
   const pinnedTop = (await stage.boundingBox())!.y;
   await scrollToStep(.94);
-  await expect(section.getByRole('heading', { name: 'Review the feedback' })).toBeInViewport();
+  await expect(section.getByRole('heading', { name: 'Turn your feedback into a practice plan' })).toBeInViewport();
   expect(Math.abs((await stage.boundingBox())!.y - pinnedTop)).toBeLessThan(2);
-  const sample = section.getByRole('img', { name: /Sample interview report/ });
+  const sample = section.getByRole('img', { name: /Sadhana Prep interview summary/ });
   await expect.poll(() => sample.evaluate(image => (image as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
 
   const footer = page.getByRole('contentinfo');

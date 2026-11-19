@@ -8,14 +8,14 @@ import './interview-walkthrough.css';
 const steps = [
   {
     title: 'Set up and analyze your interview',
-    description: 'Choose an interview track, add your role title and job description, then set the difficulty, duration, and résumé. Sadhana analyzes your résumé’s projects, technologies, and experience alongside the role to identify relevant skills, gaps, and practice topics. For subject-only practice, select Practice interview and a subject, with your résumé still required. Review the analysis, then start when your session is ready.',
+    description: 'Choose an interview track, add your role title and job description, then set the difficulty, duration, and resume. Sadhana analyzes the projects, technologies, and experience in your resume alongside the role to identify relevant skills, gaps, and practice topics. For subject-only practice, select Practice interview and a subject, with your resume still required. Review the analysis, then start when your session is ready.',
     image: roleImage,
-    alt: 'Sadhana Prep interview setup with a MERN track, role title, job description, difficulty, duration, résumé, and completed analysis.',
-    label: 'Résumé and role',
+    alt: 'Sadhana Prep interview setup with a MERN track, role title, job description, difficulty, duration, resume, and completed analysis.',
+    label: 'Resume and role',
   },
   {
     title: 'Practice a conversation with Sadhana',
-    description: 'Begin with an introduction, then answer technical questions focused on your track and role, alongside questions about your résumé projects and a smaller set of behavioral questions. Easy stays easy; Intermediate and Hard begin with fundamentals before moving to your chosen level. Questions continue for your selected duration. Speak with live captions or type in chat, then press Done answering to submit your spoken answer as text.',
+    description: 'Begin with an introduction, then answer technical questions focused on your track and role, alongside questions about your resume projects and a smaller set of behavioral questions. Easy stays easy; Intermediate and Hard begin with fundamentals before moving to your chosen level. Questions continue for your selected duration. Speak with live captions or type in chat, then press Done answering to submit your spoken answer as text.',
     image: answerImage,
     alt: 'Sadhana AI asking a React interview question in the voice interview room, with captions, call controls, and in-call messages.',
     label: 'Voice interview',
@@ -77,7 +77,7 @@ export function InterviewWalkthrough() {
   return <section className="public-section interview-walkthrough" id="how-it-works" aria-labelledby="how-it-works-title">
     <div className="public-section-head">
       <h2 id="how-it-works-title">How it works</h2>
-      <p>From résumé and role analysis to a voice interview and feedback you can act on.</p>
+      <p>From resume and role analysis to a voice interview and feedback you can act on.</p>
     </div>
     <div className="walkthrough-runway" ref={runway}>
       <div className="walkthrough-stage" ref={stage}>

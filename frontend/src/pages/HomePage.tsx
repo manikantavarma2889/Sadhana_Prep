@@ -10,7 +10,7 @@ import PrismSilkFooter, { type PrismSilkColumn } from '../components/ui/prism-si
 
 const highlights = [
   { icon: BookOpen, title: 'Build your foundations', text: 'Recognize DSA patterns, work through coding problems, and study system design with interactive diagrams. Review databases, operating systems, and networking before your next interview.' },
-  { icon: Mic, title: 'Rehearse for a real role', text: 'Use a résumé and a target job description to find skills worth practising. Then answer technical or behavioral questions aloud or by text, with follow-ups based on your answers.' },
+  { icon: Mic, title: 'Rehearse for a real role', text: 'Use a resume and a target job description to find skills worth practising. Then answer technical or behavioral questions aloud or by text, with follow-ups based on your answers.' },
   { icon: ClipboardCheck, title: 'Use the feedback to study', text: 'Review your reasoning, technical accuracy, clarity, and relevance. Read the excerpts behind the feedback and return to the Learning tracks to work on the topics you missed.' },
 ];
 
