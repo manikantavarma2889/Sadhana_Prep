@@ -4,6 +4,8 @@
 
 Import the GitHub repository with the repository root as the Vercel root directory and Node.js 24. The checked-in `vercel.json` builds the client and backend, serves static assets, and routes API requests to `api/index.mjs`. The function runs in Mumbai (`bom1`) to match the Atlas cluster.
 
+The function bundle explicitly includes the PDF parsing worker, PDF.js, and its native canvas dependencies. The parser runs in a child process, so its dependencies must be included even when automatic tracing does not discover them from the API entry point.
+
 Set these server environment variables before activating the deployment.
 
 | Variable | Value |
