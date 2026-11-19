@@ -51,8 +51,8 @@ export function SiteNav() {
         <Link to="/#about" aria-current={current === 'about' ? 'location' : undefined}>About</Link>
         <div className="site-account">
           {!isHome && user ? <Link className="site-nav-action" to="/dashboard">Workspace</Link> : <>
-            <Link className={isHome ? 'site-nav-action' : undefined} to="/login" state={state} aria-current={pathname === '/login' ? 'page' : undefined}>Sign in</Link>
-            {!isHome && <Link className="site-nav-action" to="/register" state={state} aria-current={pathname === '/register' ? 'page' : undefined}>Sign up</Link>}
+            <Link to="/login" state={state} aria-current={pathname === '/login' ? 'page' : undefined}>Sign in</Link>
+            {!isHome && <Link to="/register" state={state} aria-current={pathname === '/register' ? 'page' : undefined}>Sign up</Link>}
           </>}
         </div>
       </nav>
