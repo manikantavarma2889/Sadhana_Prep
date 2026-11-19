@@ -10,11 +10,12 @@ export const answerAudioTypes: Readonly<Record<string, string>> = {
 export function createTranscriber(config: Config, providerFetch: typeof fetch = fetch) {
   const { AUDIO_TRANSCRIPTION_MODEL: model, OPENAI_API_KEY: key } = config;
   if (!model || !key) return undefined;
-  return async function transcribe(file: Express.Multer.File) {
+  return async function transcribe(file: Express.Multer.File, context = '') {
     const extension = Object.hasOwn(answerAudioTypes, file.mimetype) ? answerAudioTypes[file.mimetype] : undefined;
     if (!extension || !file.size) throw new AppError(415, 'INVALID_AUDIO', 'Choose a supported recording.');
     const body = new FormData();
     body.set('model', model);
+    body.set('prompt', ('Interview vocabulary includes MongoDB, Node.js, Express, React, JavaScript, TypeScript, SQL. ' + context).slice(0, 1000));
     body.set('file', new Blob([Uint8Array.from(file.buffer)], { type: file.mimetype }), 'answer.' + extension);
     const unavailable = new AppError(503, 'TRANSCRIPTION_UNAVAILABLE', 'Recording transcription is temporarily unavailable.');
     let result;

@@ -5,7 +5,7 @@ import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
 import multer from 'multer';
 import { z } from 'zod';
-import type { User } from '../../shared/contracts.ts';
+import { maxUploadBytes, type User } from '../../shared/contracts.ts';
 import { prismaHeroVideo } from '../../shared/hero-media.ts';
 import { loopbackPreviewOrigins, type Config } from './config.ts';
 import type { Store } from './db/store.ts';
@@ -92,14 +92,14 @@ export function createApp(options: { config: Config; store: Store; ai: CoachingA
   }, limit(60_000, 180), express.json({ limit: '64kb' }), cookieParser());
 
   const upload = multer({
-    storage: multer.memoryStorage(), limits: { files: 1, fields: 0, parts: 2, fileSize: 5 * 1024 * 1024 },
+    storage: multer.memoryStorage(), limits: { files: 1, fields: 0, parts: 2, fileSize: maxUploadBytes },
     fileFilter: (_request, file, callback) => {
       if (file.mimetype !== 'application/pdf') return callback(new AppError(415, 'INVALID_FILE', 'Choose a PDF resume.'));
       callback(null, true);
     },
   }).single('resume');
   const uploadAnswerAudio = multer({
-    storage: multer.memoryStorage(), limits: { files: 1, fields: 0, parts: 2, fileSize: 5 * 1024 * 1024 },
+    storage: multer.memoryStorage(), limits: { files: 1, fields: 0, parts: 2, fileSize: maxUploadBytes },
   }).single('audio');
   const sameOrigin: RequestHandler = (request, _response, next) => {
     if (!trustedOrigins.has(request.get('Origin') ?? '')) {
@@ -224,13 +224,16 @@ export function createApp(options: { config: Config; store: Store; ai: CoachingA
   router.get('/interviews/:id', async (request, response: ForgeResponse) => {
     envelope(response, await interview.read(response.locals.user.id, id(request)));
   });
-  router.get('/speech/options', (_request, response) => envelope(response, { transcription: Boolean(transcribe) }));
+  router.get('/speech/options', (_request, response) => envelope(response, {
+    transcription: Boolean(transcribe), verifyTranscript: Boolean(transcribe),
+  }));
   router.post('/interviews/:id/transcription', sameOrigin, limit(60_000, 5, true), uploadAnswerAudio, async (request, response: ForgeResponse) => {
     if (!transcribe) return missing();
     const session = await interview.read(response.locals.user.id, id(request));
     if (session.status !== 'active') throw new AppError(409, 'INTERVIEW_ENDED', 'This interview has already ended.');
     if (!request.file) throw new AppError(400, 'MISSING_AUDIO', 'Include an audio recording.');
-    envelope(response, await transcribe(request.file));
+    envelope(response, await transcribe(request.file,
+      [response.locals.user.name, session.role, session.question?.text].filter(Boolean).join('. ')));
   });
   router.post('/interviews/:id/answers', limit(60_000, 25, true), async (request, response: ForgeResponse) => {
     envelope(response, await interview.answer(response.locals.user.id, id(request), body(answerSchema, request), key(request)));
@@ -273,7 +276,7 @@ export function createApp(options: { config: Config; store: Store; ai: CoachingA
         : 'The request has missing or invalid fields.');
     }
     if (error instanceof multer.MulterError) {
-      if (error.code === 'LIMIT_FILE_SIZE') return sendError(response, 413, 'FILE_TOO_LARGE', 'Uploads must be 5 MB or smaller.');
+      if (error.code === 'LIMIT_FILE_SIZE') return sendError(response, 413, 'FILE_TOO_LARGE', 'Uploads must be 4 MB or smaller.');
       return sendError(response, 400, 'INVALID_UPLOAD', 'Upload one PDF resume.');
     }
     if (error.type === 'entity.too.large') return sendError(response, 413, 'BODY_TOO_LARGE', 'Request is too large.');

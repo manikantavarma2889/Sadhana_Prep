@@ -105,9 +105,17 @@ export async function buildCoachingAI(config: Config): Promise<CoachingAI> {
   const model = config.AI_MODEL!;
   const options = { model, temperature: 0, maxRetries: 0 };
   let chat: BaseChatModel;
-  if (provider === 'openai') {
+  if (provider === 'openai' || provider === 'openrouter') {
     const { ChatOpenAI } = await import('@langchain/openai');
-    chat = new ChatOpenAI({ ...options, apiKey: config.OPENAI_API_KEY, timeout: config.AI_TIMEOUT_MS });
+    chat = new ChatOpenAI({
+      ...options, timeout: config.AI_TIMEOUT_MS,
+      apiKey: provider === 'openrouter' ? config.OPENROUTER_API_KEY : config.OPENAI_API_KEY,
+      ...(provider === 'openrouter' ? {
+        configuration: { baseURL: config.OPENROUTER_BASE_URL },
+        maxTokens: 4096,
+        modelKwargs: { reasoning: { enabled: false } },
+      } : {}),
+    });
   } else if (provider === 'gemini') {
     const { ChatGoogle } = await import('@langchain/google');
     chat = new ChatGoogle({ ...options, apiKey: config.GOOGLE_API_KEY });
@@ -122,7 +130,7 @@ export async function buildCoachingAI(config: Config): Promise<CoachingAI> {
     activeCalls++;
     try {
       const signal = AbortSignal.timeout(config.AI_TIMEOUT_MS);
-      const chain = chat.withStructuredOutput(schema, { name });
+      const chain = chat.withStructuredOutput(schema, { name, ...(provider === 'openrouter' ? { method: 'functionCalling' } : {}) });
       const result = await chain.invoke([
         ['system', system + '\n' + instruction],
         ['human', JSON.stringify(data)],
@@ -144,14 +152,14 @@ export async function buildCoachingAI(config: Config): Promise<CoachingAI> {
     async plan(settings, topics, title) {
       const target = interviewQuestionCounts[settings.minutes];
       const { questions } = await ask('interview_plan', planSchema,
-        'Write exactly the requested number of distinct realistic questions and concise assessment criteria. Focus on substantive practice after an introductory question about the candidate and their motivation. Fit the scope and depth to the session duration. Prioritize supplied job topics while respecting the chosen track and level.',
+        'Write exactly ' + target + ' distinct realistic questions and concise assessment criteria. Select among the supplied topics to fit this question count. Focus on substantive practice after an introductory question about the candidate and their motivation. Fit the scope and depth to the session duration. Prioritize supplied job topics while respecting the chosen track and level.',
         { track: settings.track, difficulty: settings.difficulty, minutes: settings.minutes, title, topics, target });
       const unique: DraftQuestion[] = [];
       for (const question of questions) {
         if (!repeatsQuestion(question.text, unique.map(item => item.text))) unique.push(question);
       }
-      if (unique.length !== target) throw new AppError(503, 'INVALID_PLAN', 'The provider did not produce a complete, distinct interview plan. Try again.');
-      return unique;
+      if (unique.length < target) throw new AppError(503, 'INVALID_PLAN', 'The provider did not produce a complete, distinct interview plan. Try again.');
+      return unique.slice(0, target);
     },
     async followUp(current, previous, answer, covered) {
       const result = await ask('interview_follow_up', followUpSchema,

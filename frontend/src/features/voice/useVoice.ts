@@ -28,7 +28,7 @@ async function waitFor<T>(work: Promise<T>, milliseconds: number, fallback: T): 
   } finally { window.clearTimeout(timer); }
 }
 
-export function useVoice(transcribe?: (audio: Blob) => Promise<string>) {
+export function useVoice(transcribe?: (audio: Blob) => Promise<string>, verifyTranscript = false) {
   const [status, setStatus] = useState<'idle' | 'requesting' | 'recording' | 'finishing'>('idle');
   const [error, setError] = useState('');
   const [transcript, setTranscript] = useState('');
@@ -39,11 +39,14 @@ export function useVoice(transcribe?: (audio: Blob) => Promise<string>) {
   const recording = useRef<Recording | null>(null);
   const generation = useRef(0);
   const pending = useRef(false);
+  const pendingStream = useRef<MediaStream | null>(null);
   const canRecord = typeof navigator.mediaDevices?.getUserMedia === 'function' && typeof window.MediaRecorder === 'function';
 
   useEffect(() => () => {
     generation.current++;
     pending.current = false;
+    pendingStream.current?.getTracks().forEach(track => track.stop());
+    pendingStream.current = null;
     const current = recording.current;
     recording.current = null;
     if (current) {
@@ -63,6 +66,8 @@ export function useVoice(transcribe?: (audio: Blob) => Promise<string>) {
     if (!current) {
       generation.current++;
       pending.current = false;
+      pendingStream.current?.getTracks().forEach(track => track.stop());
+      pendingStream.current = null;
       setStatus('idle');
       return Promise.resolve(latestTranscript.current);
     }
@@ -77,11 +82,12 @@ export function useVoice(transcribe?: (audio: Blob) => Promise<string>) {
       if (recording.current !== current) return { text: '', complete: false };
       text = text || current.text;
       let complete = !current.failed && Boolean(text);
-      if (clip && transcribe && useBackup && !complete) {
+      if (clip && transcribe && useBackup && (verifyTranscript || !complete)) {
+        if (verifyTranscript) complete = false;
         try {
           const backup = await transcribe(clip);
           if (backup.trim()) { text = backup.trim().slice(0, 8000); complete = true; }
-        } catch { /* Preserve the words already captured on this device. */ }
+        } catch { /* Keep the captured text available for review. */ }
       }
       if (recording.current !== current) return { text: '', complete: false };
       recording.current = null;
@@ -92,7 +98,7 @@ export function useVoice(transcribe?: (audio: Blob) => Promise<string>) {
       return { text, complete };
     })();
     return current.stopping;
-  }, [transcribe]);
+  }, [transcribe, verifyTranscript]);
 
   const start = useCallback(async (deviceId?: string) => {
     if (!canRecord || pending.current || recording.current) return;
@@ -114,6 +120,7 @@ export function useVoice(transcribe?: (audio: Blob) => Promise<string>) {
         audio: { ...(deviceId ? { deviceId: { exact: deviceId } } : {}), echoCancellation: true, noiseSuppression: true, channelCount: 1 },
       });
       if (token !== generation.current) { stream.getTracks().forEach(track => track.stop()); return; }
+      pendingStream.current = stream;
       stage = 'captions';
       await preparing;
       if (token !== generation.current) { stream.getTracks().forEach(track => track.stop()); return; }
@@ -138,12 +145,14 @@ export function useVoice(transcribe?: (audio: Blob) => Promise<string>) {
       media.onerror = () => { current.failed = true; audio.resolve(null); void stop(); };
       media.start();
       recording.current = current;
+      pendingStream.current = null;
       current.timer = window.setTimeout(() => { void stop(); }, 90_000);
       setStatus('recording');
     } catch {
       captions?.cancel();
       if (media && media.state !== 'inactive') media.stop();
       stream?.getTracks().forEach(track => track.stop());
+      if (pendingStream.current === stream) pendingStream.current = null;
       if (token === generation.current) {
         setStatus('idle');
         setError(stage === 'microphone'

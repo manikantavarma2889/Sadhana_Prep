@@ -11,7 +11,7 @@ npm ci
 npm run demo
 ```
 
-Open [Sadhana Prep](http://localhost:3002) to view the homepage and browse **Preparation**. Sign in with your email and password, or choose **Sign up** to create an account. The local preview uses a curated question bank and basic rule-based feedback. Accounts, resumes, and interviews live in memory for that process and reset when it stops.
+Open [Sadhana Prep](http://localhost:3002) to view the homepage and browse **Preparation**. Sign in with your email and password, or choose **Sign up** to create an account. The launcher loads the root `.env` and uses the configured database and AI provider. With `DATA_STORE=mongo` and `MONGO_URI`, accounts and interviews persist in MongoDB. With no configuration it uses a curated question bank, rule-based feedback, and process-local memory.
 
 Run `npm run build:preview` to build updates for the port 3002 preview. Refresh the page after frontend changes and restart the preview after backend changes.
 
@@ -37,9 +37,14 @@ For a same-origin build, run `npm run build` and set `APP_ORIGIN=http://localhos
 | `local` | No API keys. Uses curated track questions, rule-based follow-ups and limited feedback. |
 | `gemini` | `GOOGLE_API_KEY` and a Gemini model in `AI_MODEL` that supports structured output. |
 | `openai` | `OPENAI_API_KEY` and an OpenAI model in `AI_MODEL` that supports structured output. |
+| `openrouter` | `OPENROUTER_API_KEY`, `AI_MODEL`, and `OPENROUTER_BASE_URL=https://openrouter.ai/api/v1`. The adapter uses LangChain tool calling for validated structured output. |
 | `ollama` | A running Ollama server, `OLLAMA_URL` and a downloaded model in `AI_MODEL` that supports structured output. |
 
 The cloud and Ollama adapters use LangChain. Keep credentials in the server environment. The application checks model configuration at startup. Changing providers or models leaves existing interviews accessible. Pending evaluation work uses the configuration under which the interview was created.
+
+For OpenRouter, choose a model that supports tool calling and set an appropriate `AI_TIMEOUT_MS`, up to 45000. Free model endpoints have provider-specific usage and data policies. Use fictional interview data when evaluating `nvidia/nemotron-3.5-lightning:free`.
+
+For hosted final-transcript verification, configure `OPENAI_API_KEY` and `AUDIO_TRANSCRIPTION_MODEL` on the server. **Done answering** sends the complete recording to that speech service with interview vocabulary before submitting the final text. Live captions remain provisional while speaking.
 
 ## What you can do
 

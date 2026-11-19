@@ -31,3 +31,4 @@ audio/
 # Environment
 .env
 .env.local
+.vercel/

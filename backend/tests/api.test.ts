@@ -24,7 +24,7 @@ let database: URL | null;
 beforeAll(async () => {
   const uri = process.env.TEST_MONGO_URI;
   database = uri ? new URL(uri) : null;
-  if (database) database.pathname = '/forge_test_' + randomUUID().replaceAll('-', '');
+  if (database) database.pathname = '/forge_test_' + randomUUID().replaceAll('-', '').slice(0, 24);
   store = database ? await connectStore(database.href) : memoryStore();
   ai = await buildCoachingAI(config);
   clock = Date.now();
@@ -238,6 +238,8 @@ describe('private interview API', () => {
     const providerFetch = vi.fn<typeof fetch>(async (_url, init) => {
       const data = init?.body as FormData;
       expect(data.get('model')).toBe('gpt-transcribe');
+      expect(data.get('prompt')).toContain('MongoDB');
+      expect(data.get('prompt')).toContain('Speech Example');
       expect((data.get('file') as File).name).toBe('answer.webm');
       return Response.json({ text: ' I enjoy designing accessible interfaces. ' });
     });

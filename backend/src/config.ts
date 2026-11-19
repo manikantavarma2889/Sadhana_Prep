@@ -9,10 +9,12 @@ const environment = z.object({
   DATA_STORE: z.enum(['mongo', 'memory']).default('mongo'),
   SECURE_COOKIES: z.enum(['true', 'false']).default('false').transform(value => value === 'true'),
   TRUST_PROXY: z.coerce.number().int().min(0).max(5).default(0),
-  AI_PROVIDER: z.enum(['local', 'openai', 'gemini', 'ollama']).default('local'),
+  AI_PROVIDER: z.enum(['local', 'openai', 'openrouter', 'gemini', 'ollama']).default('local'),
   AI_MODEL: z.string().optional(),
   AI_TIMEOUT_MS: z.coerce.number().int().min(1000).max(45000).default(12000),
   OPENAI_API_KEY: z.string().optional(),
+  OPENROUTER_API_KEY: z.string().optional(),
+  OPENROUTER_BASE_URL: z.url().default('https://openrouter.ai/api/v1'),
   AUDIO_TRANSCRIPTION_MODEL: z.string().trim().optional(),
   GOOGLE_API_KEY: z.string().optional(),
   GOOGLE_OAUTH_CLIENT_ID: z.string().trim().optional(),
@@ -27,6 +29,7 @@ const environment = z.object({
   if (env.DATA_STORE === 'mongo') requireField(Boolean(env.MONGO_URI), 'MONGO_URI');
   if (env.AI_PROVIDER !== 'local') requireField(Boolean(env.AI_MODEL?.trim()), 'AI_MODEL');
   if (env.AI_PROVIDER === 'openai') requireField(Boolean(env.OPENAI_API_KEY), 'OPENAI_API_KEY');
+  if (env.AI_PROVIDER === 'openrouter') requireField(Boolean(env.OPENROUTER_API_KEY), 'OPENROUTER_API_KEY');
   if (env.AUDIO_TRANSCRIPTION_MODEL) requireField(Boolean(env.OPENAI_API_KEY), 'OPENAI_API_KEY');
   if (env.AI_PROVIDER === 'gemini') requireField(Boolean(env.GOOGLE_API_KEY), 'GOOGLE_API_KEY');
   if (env.NODE_ENV === 'production') {
@@ -40,7 +43,7 @@ export type Config = z.output<typeof environment>;
 export function loopbackPreviewOrigins(config: Config): string[] {
   const origin = new URL(config.APP_ORIGIN);
   const loopback = ['localhost', '127.0.0.1'];
-  if (config.NODE_ENV === 'production' || config.DATA_STORE !== 'memory' || origin.protocol !== 'http:' ||
+  if (config.NODE_ENV === 'production' || origin.protocol !== 'http:' ||
     !loopback.includes(origin.hostname) || Number(origin.port || 80) !== config.PORT) return [];
   return loopback.map(host => new URL('http://' + host + ':' + config.PORT).origin);
 }

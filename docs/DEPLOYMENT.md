@@ -1,5 +1,36 @@
 # Deployment and operations
 
+## Vercel and MongoDB Atlas
+
+Import the GitHub repository with the repository root as the Vercel root directory and Node.js 24. The checked-in `vercel.json` builds the client and backend, serves static assets, and routes API requests to `api/index.mjs`. The function runs in Mumbai (`bom1`) to match the Atlas cluster.
+
+Set these server environment variables before activating the deployment.
+
+| Variable | Value |
+| --- | --- |
+| `NODE_ENV` | `production` |
+| `DATA_STORE` | `mongo` |
+| `MONGO_URI` | Atlas connection string with the application database |
+| `JWT_SECRET` | A stable random secret of at least 32 characters |
+| `APP_ORIGIN` | The exact public HTTPS origin used to open the site |
+| `SECURE_COOKIES` | `true` |
+| `TRUST_PROXY` | The deployment's proxy hop count |
+| `AI_PROVIDER` | `openrouter` |
+| `AI_MODEL` | A tool-calling model available to the OpenRouter account |
+| `OPENROUTER_API_KEY` | Server-side OpenRouter key |
+| `OPENROUTER_BASE_URL` | `https://openrouter.ai/api/v1` |
+| `AI_TIMEOUT_MS` | `45000` |
+| `OPENAI_API_KEY` | Server-side speech API key |
+| `AUDIO_TRANSCRIPTION_MODEL` | `gpt-transcribe` |
+
+Use the matching origin and database for preview environments. Configure Atlas network access for Vercel and scope the database user to the application database. Each function instance reuses its MongoDB connection. Submissions and report polls schedule report processing through `waitUntil`, with MongoDB leases coordinating concurrent instances.
+
+OpenAI verifies complete answer recordings with interview vocabulary before submission. Browser captions remain provisional. The NVIDIA free endpoint restricts personal and confidential data, so evaluate it with fictional interviews and choose a production model consistent with the site's data use.
+
+Verify readiness, sign-up, resumed sign-in, resume upload, role analysis, final speech transcription, and report completion after deployment. Uploads are limited to 4 MB so multipart requests fit within Vercel's request-body limit.
+
+## Docker Compose
+
 Use Docker Compose for the local application and MongoDB. Put your secret in the root `.env`, then run:
 
 ```bash

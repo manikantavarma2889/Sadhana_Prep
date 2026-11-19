@@ -3,7 +3,7 @@ import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tansta
 import { ArrowRight, FileText, Sparkles, UploadCloud } from 'lucide-react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
-  difficulties, durations, interviewQuestionCounts, trackLabels, tracks, type InterviewSession, type InterviewSettings,
+  difficulties, durations, interviewQuestionCounts, maxUploadBytes, trackLabels, tracks, type InterviewSession, type InterviewSettings,
   type List, type Resume, type RoleAnalysis,
 } from '../../../shared/contracts.ts';
 import { InterviewLobby } from '../components/InterviewLobby.tsx';
@@ -216,17 +216,17 @@ export function ResumePage() {
     <section className="panel form-panel upload-panel">
       <div className="upload-icon"><UploadCloud size={29} aria-hidden /></div>
       <h2>Upload a resume</h2>
-      <p>Text-based PDF, up to 5 MB. Sadhana Prep saves the skill profile and discards the PDF after processing.</p>
+      <p>Text-based PDF, up to 4 MB. Sadhana Prep saves the skill profile and discards the PDF after processing.</p>
       <form className="upload-form" onSubmit={event => {
         event.preventDefault();
         if (file) upload.mutate(file);
       }}>
         <label className="file-picker"><span className="sr-only">Choose a PDF resume</span><input ref={fileInput} type="file"
           accept=".pdf,application/pdf" onChange={event => { setFile(event.target.files?.[0] ?? null); setMessage(''); upload.reset(); }} /></label>
-        <button className="button button-primary" disabled={!file || file.size > 5 * 1024 * 1024 || upload.isPending}>
+        <button className="button button-primary" disabled={!file || file.size > maxUploadBytes || upload.isPending}>
           {upload.isPending ? 'Extracting skills…' : 'Upload and extract'}</button>
       </form>
-      {file && file.size > 5 * 1024 * 1024 && <ErrorNotice error={new Error('Choose a PDF smaller than 5 MB.')} />}
+      {file && file.size > maxUploadBytes && <ErrorNotice error={new Error('Choose a PDF smaller than 4 MB.')} />}
       <ErrorNotice error={upload.error ?? query.error} retry={query.isError ? () => void query.refetch() : undefined} />
       {message && <p className="success-text" role="status">{message}</p>}
     </section>

@@ -4,7 +4,7 @@ import type { Provider } from '../../../shared/contracts.ts';
 import brandLogo from '../assets/sadhana-prep-logo.png';
 
 export const providerLabel: Record<Provider, string> = {
-  local: 'Local practice', openai: 'OpenAI', gemini: 'Gemini', ollama: 'Ollama',
+  local: 'Local practice', openai: 'OpenAI', openrouter: 'OpenRouter', gemini: 'Gemini', ollama: 'Ollama',
 };
 
 export function Brand() {

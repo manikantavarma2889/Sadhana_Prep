@@ -13,6 +13,8 @@ services:
       AI_MODEL: ${AI_MODEL:-}
       AI_TIMEOUT_MS: ${AI_TIMEOUT_MS:-12000}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      OPENROUTER_BASE_URL: ${OPENROUTER_BASE_URL:-https://openrouter.ai/api/v1}
       GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
       OLLAMA_URL: ${DOCKER_OLLAMA_URL:-http://host.docker.internal:11434}
     ports:

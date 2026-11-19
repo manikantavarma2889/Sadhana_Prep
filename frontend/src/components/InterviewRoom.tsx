@@ -38,17 +38,18 @@ export function InterviewRoom({ interview, question, seconds, expired, end, endi
   const camera = useInterviewCamera();
   const voiceEnabled = Boolean(user?.voiceEnabled);
   const speechOptions = useQuery({
-    queryKey: ['speech-options'], queryFn: () => api<{ transcription: boolean }>('/speech/options'),
+    queryKey: ['speech-options'], queryFn: () => api<{ transcription: boolean; verifyTranscript?: boolean }>('/speech/options'),
     enabled: voiceEnabled, retryOnMount: false, staleTime: 5 * 60_000,
   });
   const backupEnabled = speechOptions.data?.transcription === true;
+  const verifyTranscript = speechOptions.data?.verifyTranscript === true;
   const transcribe = useCallback(async (audio: Blob) => {
     const payload = new FormData();
     payload.set('audio', audio, 'answer');
     const result = await api<{ text: string }>('/interviews/' + interview.id + '/transcription', { method: 'POST', body: payload });
     return result.text;
-  }, [interview.id]);
-  const voice = useVoice(backupEnabled ? transcribe : undefined);
+  }, [interview.id, verifyTranscript]);
+  const voice = useVoice(backupEnabled ? transcribe : undefined, verifyTranscript);
   const { speak, stopSpeaking } = voice;
   const canSpeak = voiceEnabled && typeof window.SpeechSynthesisUtterance === 'function';
   const candidate = user?.name?.trim() || 'there';
@@ -247,7 +248,7 @@ export function InterviewRoom({ interview, question, seconds, expired, end, endi
   }
   const togglePanel = (target: InterviewPanel) => setPanel(panel === target ? null : target);
   const readyToFinish = recording || (voice.status === 'idle' && Boolean(voice.transcript) && !draft && !answer.isPending);
-  const statuses = ending ? 'Opening interview summary…' : finishingVoice ? 'Finishing your transcript…'
+  const statuses = ending ? 'Opening interview summary…' : finishingVoice ? verifyTranscript ? 'Checking your final transcript…' : 'Finishing your transcript…'
     : recording ? 'Your turn — listening…' : answer.isPending ? interviewerName + ' is thinking…'
     : voice.status === 'requesting' ? 'Preparing your microphone…'
     : interviewerSpeaking ? interviewerName + (phase === 'introduction' ? ' is introducing the session…' : ' is asking…') : 'Your turn to answer';
@@ -288,7 +289,9 @@ export function InterviewRoom({ interview, question, seconds, expired, end, endi
           <div className="panel-h"><span>{panel === 'chat' ? 'In-call messages' : 'Activities'}</span>
             <MeetIconButton className="icon-b" icon="close" label="Close panel" onClick={() => setPanel(null)} /></div>
           {panel === 'chat' ? <>
-            <p className="panel-note">Your words appear on the call while you speak. Select Done answering to send your answer here.</p>
+            <p className="panel-note">{verifyTranscript
+              ? 'Live captions are a draft. Done answering checks the full recording before sending your final text.'
+              : 'Your words appear on the call while you speak. Select Done answering to send your answer here.'}</p>
             <div className="chat-list" ref={chat}>
               <Message text={interviewerName + ' (AI Interviewer) joined the call'} />
               {welcomeDelivered && <Message name={interviewerName} text={welcome} />}

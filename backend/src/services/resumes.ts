@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { fork } from 'node:child_process';
 import { z } from 'zod';
-import type { List, Resume, RoleAnalysis } from '../../../shared/contracts.ts';
+import { maxUploadBytes, type List, type Resume, type RoleAnalysis } from '../../../shared/contracts.ts';
 import type { SavedAnalysis, SavedResume, Store } from '../db/store.ts';
 import { AppError, missing } from '../errors.ts';
 import type { CoachingAI } from './ai/coaching.ts';
@@ -51,12 +51,11 @@ export function localRoleAnalysis(description: string) {
   return { required, preferred, topics: [...required, ...preferred].slice(0, 8) };
 }
 
-const maxPdfSize = 5 * 1024 * 1024;
 let activeParses = 0;
 
 async function pdfText(file: Express.Multer.File | undefined) {
   if (!file) throw new AppError(400, 'FILE_REQUIRED', 'Choose a PDF resume.');
-  if (file.size > maxPdfSize) throw new AppError(413, 'FILE_TOO_LARGE', 'PDF resumes must be 5 MB or smaller.');
+  if (file.size > maxUploadBytes) throw new AppError(413, 'FILE_TOO_LARGE', 'PDF resumes must be 4 MB or smaller.');
   if (file.mimetype !== 'application/pdf' || !/\.pdf$/i.test(file.originalname) || file.buffer.subarray(0, 5).toString() !== '%PDF-') {
     throw new AppError(415, 'INVALID_FILE', 'Only valid PDF resumes are supported.');
   }

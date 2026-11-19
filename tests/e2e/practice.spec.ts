@@ -124,6 +124,18 @@ for (const playbackBlocked of [false, true]) {
   test(playbackBlocked ? 'retries blocked playback before opening the microphone'
     : 'finishes each spoken message before chat and transcribes recorded speech locally', async ({ page }) => {
     test.setTimeout(60_000);
+    let transcriptions = 0;
+    const correctedAnswer = 'I enjoy solving software problems with my team. I use MongoDB indexes to speed up queries.';
+    if (!playbackBlocked) {
+      await page.route('**/api/v1/speech/options', route => route.fulfill({ json: {
+        data: { transcription: true, verifyTranscript: true },
+      } }));
+      await page.route('**/transcription', route => {
+        expect(route.request().headers()['content-type']).toContain('multipart/form-data');
+        transcriptions++;
+        return route.fulfill({ json: { data: { text: transcriptions === 1 ? '' : correctedAnswer } } });
+      });
+    }
     const sample = Array.from(readFileSync(new URL('../fixtures/spoken-answer.wav', import.meta.url)));
     await page.addInitScript(({ blocked, sample }) => {
       const spoken: string[] = [];
@@ -186,6 +198,10 @@ for (const playbackBlocked of [false, true]) {
     await expect(chat.getByText(/solving software problems/i)).toHaveCount(0);
     await page.getByRole('button', { name: 'Done answering' }).click();
     await expect(chat.getByText(/solving software problems/i)).toBeVisible();
+    if (!playbackBlocked) {
+      await expect(chat.getByText(correctedAnswer, { exact: true })).toBeVisible();
+      expect(transcriptions).toBe(2);
+    }
     await expect(page.getByText('Question 2 of 4', { exact: true })).toBeVisible();
     await page.getByRole('button', { name: 'End interview' }).click();
     await expect(page.getByRole('heading', { name: 'Interview summary' })).toBeVisible();
