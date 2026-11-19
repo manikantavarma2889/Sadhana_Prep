@@ -1,30 +1,30 @@
 import { useEffect, useRef, useState } from 'react';
 import { useReducedMotion } from 'framer-motion';
-import answerImage from '../assets/interview-demo/answer.jpg';
-import reportImage from '../assets/interview-demo/report.jpg';
-import roleImage from '../assets/interview-demo/role.jpg';
+import answerImage from '../assets/interview-demo/voice-interview.png';
+import reportImage from '../assets/interview-demo/feedback-report.png';
+import roleImage from '../assets/interview-demo/session-setup.png';
 import './interview-walkthrough.css';
 
 const steps = [
   {
-    title: 'Upload your résumé and add a role',
-    description: 'Upload a résumé PDF, select its profile, and add the target role and job description. The AI analyzes the role alongside your résumé skills to identify what matches, where you have gaps, and which topics to practice.',
+    title: 'Set up and analyze your interview',
+    description: 'Choose an interview track, add your role title and job description, then set the difficulty, duration, and résumé. Sadhana analyzes your résumé’s projects, technologies, and experience alongside the role to identify relevant skills, gaps, and practice topics. For subject-only practice, select Practice interview and a subject, with your résumé still required. Review the analysis, then start when your session is ready.',
     image: roleImage,
-    alt: 'Sample role analysis for a full-stack engineer showing matched skills, skill gaps, and interview topics.',
+    alt: 'Sadhana Prep interview setup with a MERN track, role title, job description, difficulty, duration, résumé, and completed analysis.',
     label: 'Résumé and role',
   },
   {
-    title: 'Answer the AI’s questions aloud',
-    description: 'The AI asks interview questions about your track and target role. Record your answer on a supported browser or type it in. Explain how you would approach the problem and respond to follow-up questions as you go.',
+    title: 'Practice a conversation with Sadhana',
+    description: 'Begin with an introduction, then answer technical questions focused on your track and role, alongside questions about your résumé projects and a smaller set of behavioral questions. Easy stays easy; Intermediate and Hard begin with fundamentals before moving to your chosen level. Questions continue for your selected duration. Speak with live captions or type in chat, then press Done answering to submit your spoken answer as text.',
     image: answerImage,
-    alt: 'Sample interview question with question playback, a Record answer button, and a transcript field.',
+    alt: 'Sadhana AI asking a React interview question in the voice interview room, with captions, call controls, and in-call messages.',
     label: 'Voice interview',
   },
   {
-    title: 'Review the feedback',
-    description: 'See how you did on communication clarity, technical accuracy, reasoning, completeness, and relevance to the role or question. The report cites excerpts from your answers and shows what to work on before the next round.',
+    title: 'Turn your feedback into a practice plan',
+    description: 'Review your overall score, questions answered, average words per answer, filler words, and session duration. For each submitted answer, the AI scores applicable dimensions: technical accuracy, conceptual understanding, problem solving, communication clarity, completeness, reasoning, and relevance. Scores include excerpts from your answer and an explanation, with strengths, improvements, and priorities for next time. Use the feedback to choose what to study and practice again.',
     image: reportImage,
-    alt: 'Sample interview report with scores, answer evidence, and feedback.',
+    alt: 'Sadhana Prep interview summary showing an overall score, answer metrics, focus areas, and evidence-based scoring for individual answers.',
     label: 'Feedback report',
   },
 ];
@@ -77,7 +77,7 @@ export function InterviewWalkthrough() {
   return <section className="public-section interview-walkthrough" id="how-it-works" aria-labelledby="how-it-works-title">
     <div className="public-section-head">
       <h2 id="how-it-works-title">How it works</h2>
-      <p>Scroll through a sample interview, from setting up your role to reviewing the report.</p>
+      <p>From résumé and role analysis to a voice interview and feedback you can act on.</p>
     </div>
     <div className="walkthrough-runway" ref={runway}>
       <div className="walkthrough-stage" ref={stage}>
