@@ -233,7 +233,8 @@ export function createApp(options: { config: Config; store: Store; ai: CoachingA
     if (session.status !== 'active') throw new AppError(409, 'INTERVIEW_ENDED', 'This interview has already ended.');
     if (!request.file) throw new AppError(400, 'MISSING_AUDIO', 'Include an audio recording.');
     envelope(response, await transcribe(request.file,
-      [response.locals.user.name, session.role, session.question?.text].filter(Boolean).join('. ')));
+      [response.locals.user.name, session.role, session.question?.text].filter(Boolean).join('. '),
+      [response.locals.user.name, session.role, session.question?.topic].filter((term): term is string => Boolean(term))));
   });
   router.post('/interviews/:id/answers', limit(60_000, 25, true), async (request, response: ForgeResponse) => {
     envelope(response, await interview.answer(response.locals.user.id, id(request), body(answerSchema, request), key(request)));

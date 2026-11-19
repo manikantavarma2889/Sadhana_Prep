@@ -258,6 +258,40 @@ describe('private interview API', () => {
     expect(providerFetch).toHaveBeenCalledTimes(1);
   });
 
+  it('verifies Gemini recordings verbatim with vocabulary and rejects missing model output', async () => {
+    const audio = Buffer.from('fixture audio bytes');
+    const providerFetch = vi.fn<typeof fetch>(async (url, init) => {
+      expect(url).toBe('https://generativelanguage.googleapis.com/v1beta/interactions');
+      expect(init?.headers).toMatchObject({ 'x-goog-api-key': 'test-gemini-key' });
+      const data = JSON.parse(String(init?.body));
+      expect(data).toMatchObject({ model: 'gemini-3.5-transcribe', store: false,
+        input: [{ type: 'audio', data: audio.toString('base64'), mime_type: 'audio/webm' }],
+        generation_config: { transcription_config: { language_codes: ['en'], mode: { type: 'verbatim' } } },
+      });
+      expect(data.generation_config.transcription_config.custom_vocabulary).toEqual(expect.arrayContaining(['MongoDB', 'Gemini Speech Example']));
+      return Response.json({ status: 'completed', steps: [
+        { type: 'thought', content: [{ type: 'text', text: 'Private reasoning is not a transcript.' }] },
+        { type: 'model_output', content: [{ type: 'text', text: ' Um, I use MongoDB indexes. ' }] },
+      ] });
+    });
+    const withSpeech = createApp({ config: { ...config, AUDIO_TRANSCRIPTION_PROVIDER: 'gemini',
+      GOOGLE_API_KEY: 'test-gemini-key', AUDIO_TRANSCRIPTION_MODEL: 'gemini-3.5-transcribe' }, store, ai, providerFetch });
+    const owner = await register('Gemini Speech Example', withSpeech);
+    const created = await request(withSpeech).post(prefix + '/interviews').set('Authorization', owner.token)
+      .set('Idempotency-Key', randomUUID()).send(setup).expect(201);
+    const endpoint = prefix + '/interviews/' + created.body.data.id + '/transcription';
+    const upload = () => request(withSpeech).post(endpoint).set('Origin', origin).set('Authorization', owner.token)
+      .attach('audio', audio, { filename: 'fixture.webm', contentType: 'video/webm' });
+    await upload().expect(200, { data: { text: 'Um, I use MongoDB indexes.' } });
+    providerFetch.mockResolvedValueOnce(Response.json({ status: 'completed', steps: [{ type: 'thought', content: [] }] }));
+    await upload().expect(503);
+    providerFetch.mockResolvedValueOnce(Response.json({ error: { message: 'Private provider error' } }, { status: 429 }));
+    const failed = await upload().expect(503);
+    expect(failed.body.error.code).toBe('TRANSCRIPTION_UNAVAILABLE');
+    expect(JSON.stringify(failed.body)).not.toContain('Private provider error');
+    expect(providerFetch).toHaveBeenCalledTimes(3);
+  });
+
   it('finalizes expired sessions and fails closed on missing provider output', async () => {
     const original = clock;
     const user = await register('Timebox Tester');

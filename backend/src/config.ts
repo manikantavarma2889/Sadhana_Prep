@@ -15,6 +15,7 @@ const environment = z.object({
   OPENAI_API_KEY: z.string().optional(),
   OPENROUTER_API_KEY: z.string().optional(),
   OPENROUTER_BASE_URL: z.url().default('https://openrouter.ai/api/v1'),
+  AUDIO_TRANSCRIPTION_PROVIDER: z.enum(['openai', 'gemini']).default('openai'),
   AUDIO_TRANSCRIPTION_MODEL: z.string().trim().optional(),
   GOOGLE_API_KEY: z.string().optional(),
   GOOGLE_OAUTH_CLIENT_ID: z.string().trim().optional(),
@@ -30,7 +31,10 @@ const environment = z.object({
   if (env.AI_PROVIDER !== 'local') requireField(Boolean(env.AI_MODEL?.trim()), 'AI_MODEL');
   if (env.AI_PROVIDER === 'openai') requireField(Boolean(env.OPENAI_API_KEY), 'OPENAI_API_KEY');
   if (env.AI_PROVIDER === 'openrouter') requireField(Boolean(env.OPENROUTER_API_KEY), 'OPENROUTER_API_KEY');
-  if (env.AUDIO_TRANSCRIPTION_MODEL) requireField(Boolean(env.OPENAI_API_KEY), 'OPENAI_API_KEY');
+  if (env.AUDIO_TRANSCRIPTION_MODEL) {
+    const speechKey = env.AUDIO_TRANSCRIPTION_PROVIDER === 'gemini' ? 'GOOGLE_API_KEY' : 'OPENAI_API_KEY';
+    requireField(Boolean(env[speechKey]), speechKey);
+  }
   if (env.AI_PROVIDER === 'gemini') requireField(Boolean(env.GOOGLE_API_KEY), 'GOOGLE_API_KEY');
   if (env.NODE_ENV === 'production') {
     requireField(env.DATA_STORE === 'mongo', 'DATA_STORE');

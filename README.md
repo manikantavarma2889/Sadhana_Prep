@@ -44,7 +44,7 @@ The cloud and Ollama adapters use LangChain. Keep credentials in the server envi
 
 For OpenRouter, choose a model that supports tool calling and set an appropriate `AI_TIMEOUT_MS`, up to 45000. Free model endpoints have provider-specific usage and data policies. Use fictional interview data when evaluating `nvidia/nemotron-3.5-lightning:free`.
 
-For hosted final-transcript verification, configure `OPENAI_API_KEY` and `AUDIO_TRANSCRIPTION_MODEL` on the server. **Done answering** sends the complete recording to that speech service with interview vocabulary before submitting the final text. Live captions remain provisional while speaking.
+For hosted final-transcript verification, set `AUDIO_TRANSCRIPTION_PROVIDER=gemini`, `AUDIO_TRANSCRIPTION_MODEL=gemini-3.5-transcribe`, and `GOOGLE_API_KEY` on the server. Gemini returns verbatim speech with technical vocabulary hints and interaction storage disabled. OpenAI remains available with `AUDIO_TRANSCRIPTION_PROVIDER=openai`, an OpenAI transcription model, and `OPENAI_API_KEY`. **Done answering** sends the complete recording to the selected speech service before submitting the final text. Live captions remain provisional while speaking. Speech and interview coaching providers are configured independently.
 
 ## What you can do
 
@@ -55,7 +55,7 @@ For hosted final-transcript verification, configure `OPENAI_API_KEY` and `AUDIO_
 - Review seven coaching dimensions, answer excerpts, strengths, improvements, coverage, history and comparable results for the selected track and difficulty.
 - Hear the full introduction and each question before the microphone opens. Each spoken message appears in chat after playback finishes. Vosk runs English captions locally in the browser, and **Done answering** sends the finished transcript to chat. The first voice session downloads a roughly 41 MB model from the application. You can also type answers in chat.
 
-Sadhana Prep discards PDF files after extraction and saves the skill profile. The browser may use a speech service for live transcription. To enable backup transcription after recording, set `AUDIO_TRANSCRIPTION_MODEL=gpt-transcribe` and `OPENAI_API_KEY` on the server. When enabled, the app sends the recording to OpenAI only if the browser fails to complete the transcript. The configured AI provider receives relevant job details, skill names and submitted interview answers for coaching. Feedback scores are intended for practice.
+Sadhana Prep discards PDF files after extraction and saves the skill profile. Live English captions run in the browser. When hosted transcription is enabled, the app sends each completed answer recording to the selected Gemini or OpenAI speech provider for final verification. The configured coaching provider receives relevant job details, skill names and submitted interview answers. Feedback scores are intended for practice.
 
 ## Verify and deploy
 

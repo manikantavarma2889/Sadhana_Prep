@@ -48,5 +48,10 @@ describe('interview domain', () => {
     expect(() => loadConfig({ DATA_STORE: 'memory' })).toThrow(/JWT_SECRET/);
     expect(() => loadConfig({ NODE_ENV: 'production', DATA_STORE: 'memory', JWT_SECRET: 's'.repeat(64) })).toThrow(/DATA_STORE/);
     expect(() => loadConfig({ DATA_STORE: 'memory', JWT_SECRET: 's'.repeat(64), AI_PROVIDER: 'gemini' })).toThrow(/GOOGLE_API_KEY/);
+    const speech = { DATA_STORE: 'memory', JWT_SECRET: 's'.repeat(64), AUDIO_TRANSCRIPTION_PROVIDER: 'gemini',
+      AUDIO_TRANSCRIPTION_MODEL: 'gemini-3.5-transcribe' };
+    expect(() => loadConfig(speech)).toThrow(/GOOGLE_API_KEY/);
+    expect(loadConfig({ ...speech, GOOGLE_API_KEY: 'test-key' }).AUDIO_TRANSCRIPTION_PROVIDER).toBe('gemini');
+    expect(() => loadConfig({ ...speech, AUDIO_TRANSCRIPTION_PROVIDER: 'openai' })).toThrow(/OPENAI_API_KEY/);
   });
 });

@@ -22,12 +22,13 @@ Set these server environment variables before activating the deployment.
 | `OPENROUTER_API_KEY` | Server-side OpenRouter key |
 | `OPENROUTER_BASE_URL` | `https://openrouter.ai/api/v1` |
 | `AI_TIMEOUT_MS` | `45000` |
-| `OPENAI_API_KEY` | Server-side speech API key |
-| `AUDIO_TRANSCRIPTION_MODEL` | `gpt-transcribe` |
+| `GOOGLE_API_KEY` | Server-side Gemini speech API key |
+| `AUDIO_TRANSCRIPTION_PROVIDER` | `gemini` |
+| `AUDIO_TRANSCRIPTION_MODEL` | `gemini-3.5-transcribe` |
 
 Use the matching origin and database for preview environments. Configure Atlas network access for Vercel and scope the database user to the application database. Each function instance reuses its MongoDB connection. Submissions and report polls schedule report processing through `waitUntil`, with MongoDB leases coordinating concurrent instances.
 
-OpenAI verifies complete answer recordings with interview vocabulary before submission. Browser captions remain provisional. The NVIDIA free endpoint restricts personal and confidential data, so evaluate it with fictional interviews and choose a production model consistent with the site's data use.
+Gemini verifies complete answer recordings with interview vocabulary before submission. Verbatim mode preserves filler words and repetitions for coaching, and requests set `store=false`. Browser captions remain provisional. Speech can also use OpenAI by setting `AUDIO_TRANSCRIPTION_PROVIDER=openai`, a supported transcription model, and `OPENAI_API_KEY`. The NVIDIA free endpoint restricts personal and confidential data, so evaluate it with fictional interviews and choose a production model consistent with the site's data use.
 
 Verify readiness, sign-up, resumed sign-in, resume upload, role analysis, final speech transcription, and report completion after deployment. Uploads are limited to 4 MB so multipart requests fit within Vercel's request-body limit.
 
