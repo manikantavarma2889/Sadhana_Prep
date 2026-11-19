@@ -1,5 +1,7 @@
 export function syntheticResume() {
-  const stream = 'BT /F1 12 Tf 72 710 Td (Alex Example - React, TypeScript, Node.js, Express, and Git.) Tj ET';
+  const stream = 'BT /F1 12 Tf 72 710 Td (Alex Example - React, TypeScript, Node.js, Express, and Git.) Tj ' +
+    '0 -20 Td (Project: CampusConnect. Built a React and TypeScript student dashboard.) Tj ' +
+    '0 -20 Td (Implemented keyboard navigation and Express APIs with MongoDB.) Tj ET';
   const objects = [
     '<< /Type /Catalog /Pages 2 0 R >>',
     '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',

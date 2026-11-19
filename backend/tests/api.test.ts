@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { createConnection } from 'mongoose';
 import request from 'supertest';
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { syntheticResume } from '../../tests/fixtures/resume.ts';
 import { createApp } from '../src/app.ts';
 import { loadConfig } from '../src/config.ts';
@@ -38,12 +38,26 @@ afterAll(async () => {
   }
 });
 
+beforeEach(() => { app = createApp({ config, store, ai, now: () => clock }); });
+
 async function register(name: string, server = app) {
   const email = randomUUID() + '@example.com';
   const result = await request(server).post(prefix + '/auth/register').set('Origin', origin)
     .send({ name, email, password }).expect(201);
   const cookie = (result.headers['set-cookie'] as unknown as string[])[0]!;
   return { token: 'Bearer ' + result.body.data.accessToken, email, cookie, id: result.body.data.user.id };
+}
+
+async function prepared(user: { id: string; token: string }, server = app, options: Record<string, unknown> = {}) {
+  const id = randomUUID();
+  const createdAt = new Date().toISOString();
+  await store.resumes.insert({ id, owner: user.id, sortKey: createdAt + '_' + id, createdAt,
+    label: 'Example resume', skills: ['React', 'Node.js', 'TypeScript'],
+    text: 'Alex Example. Project: ShopPortal. Built a React and Node.js storefront with TypeScript and SQL. Worked on testing and API performance.' });
+  const chosen = { ...setup, ...options };
+  const result = await request(server).post(prefix + '/interview-preparations').set('Authorization', user.token)
+    .send({ ...chosen, resumeId: id, title: 'Software Engineer', description: 'React and Node.js are required. TypeScript and SQL are preferred.' }).expect(201);
+  return { ...chosen, analysisId: result.body.data.id };
 }
 
 describe('Google sign-in and password management', () => {
@@ -183,8 +197,8 @@ describe('private interview API', () => {
     expect(resume.skills).toEqual(expect.arrayContaining(['React', 'TypeScript', 'Node.js']));
     expect(resume).not.toHaveProperty('text');
     await request(app).get(prefix + '/resumes/' + resume.id).set('Authorization', stranger.token).expect(404);
-    const result = await request(app).post(prefix + '/role-analyses').set('Authorization', user.token)
-      .send({ title: 'React Developer', description: 'React and Docker are required. Preferred qualifications include Kubernetes.', resumeId: resume.id }).expect(201);
+    const result = await request(app).post(prefix + '/interview-preparations').set('Authorization', user.token)
+      .send({ ...setup, title: 'React Developer', description: 'React and Docker are required. Preferred qualifications include Kubernetes.', resumeId: resume.id }).expect(201);
     expect(result.body.data.matches).toContain('React');
     expect(result.body.data.gaps).toContain('Docker');
     const created = await request(app).post(prefix + '/interviews').set('Authorization', user.token).set('Idempotency-Key', randomUUID())
@@ -195,14 +209,65 @@ describe('private interview API', () => {
       .set('Idempotency-Key', randomUUID()).send({
         action: 'skip', questionId: created.body.data.question.id, expectedRevision: created.body.data.revision,
       }).expect(200);
-    expect(next.body.data.question.topic).toBe('Docker');
+    expect(next.body.data.question).toMatchObject({ category: 'track', difficulty: 'foundation' });
     await request(app).get(prefix + '/interviews/' + created.body.data.id).set('Authorization', stranger.token).expect(404);
   });
 
-  it('persists a follow-up, handles concurrent duplicate writes and verifies report evidence', async () => {
+  it('requires an analyzed resume and rejects changed settings, changed resumes and other owners', async () => {
+    const user = await register('Setup Guard');
+    const stranger = await register('Setup Stranger');
+    await request(app).post(prefix + '/interviews').set('Authorization', user.token).set('Idempotency-Key', randomUUID()).send(setup).expect(400);
+    await request(app).post(prefix + '/interview-preparations').set('Authorization', user.token)
+      .send({ ...setup, title: 'Developer', description: 'Build React applications with TypeScript.' }).expect(400);
+    const configured = await prepared(user);
+    await request(app).post(prefix + '/interviews').set('Authorization', stranger.token).set('Idempotency-Key', randomUUID()).send(configured).expect(404);
+    for (const patch of [{ minutes: 15 }, { difficulty: 'advanced' }, { track: 'java' }]) {
+      await request(app).post(prefix + '/interviews').set('Authorization', user.token).set('Idempotency-Key', randomUUID())
+        .send({ ...configured, ...patch }).expect(409);
+    }
+    const analysis = (await store.analyses.get({ id: configured.analysisId }))!;
+    await store.resumes.update({ id: analysis.resumeId! }, { skills: ['Python'] });
+    await request(app).post(prefix + '/interviews').set('Authorization', user.token).set('Idempotency-Key', randomUUID()).send(configured).expect(409);
+    const id = randomUUID();
+    await store.resumes.insert({ id, owner: user.id, sortKey: 'old_' + id, createdAt: new Date().toISOString(), label: 'Old profile', skills: ['Java'] });
+    await request(app).post(prefix + '/interview-preparations').set('Authorization', user.token)
+      .send({ ...setup, track: 'practice', practiceTrack: 'java', resumeId: id }).expect(422);
+  });
+
+  it('runs resume-only Java practice beyond four questions and obeys the duration', async () => {
+    const user = await register('Practice Candidate');
+    const configured = await prepared(user);
+    const analysis = (await store.analyses.get({ id: configured.analysisId }))!;
+    const input = { track: 'practice', practiceTrack: 'java', difficulty: 'foundation', minutes: 15, resumeId: analysis.resumeId };
+    const preparedPractice = await request(app).post(prefix + '/interview-preparations').set('Authorization', user.token).send(input).expect(201);
+    let session = (await request(app).post(prefix + '/interviews').set('Authorization', user.token).set('Idempotency-Key', randomUUID())
+      .send({ track: 'practice', practiceTrack: 'java', difficulty: 'foundation', minutes: 15, analysisId: preparedPractice.body.data.id }).expect(201)).body.data;
+    const deadline = session.deadlineAt;
+    const seen = new Set<string>();
+    for (let index = 0; index < 9; index++) {
+      expect(session.question.difficulty).toBe('foundation');
+      expect(seen.has(session.question.text)).toBe(false);
+      seen.add(session.question.text);
+      session = (await request(app).post(prefix + '/interviews/' + session.id + '/answers').set('Authorization', user.token)
+        .set('Idempotency-Key', randomUUID()).send({ action: 'skip', questionId: session.question.id, expectedRevision: session.revision }).expect(200)).body.data;
+      expect(session.status).toBe('active');
+      expect(session.deadlineAt).toBe(deadline);
+    }
+    expect(session.turns).toHaveLength(9);
+    expect(session.timeBased).toBe(true);
+    const original = clock;
+    try {
+      clock += 16 * 60_000;
+      const expired = await request(app).get(prefix + '/interviews/' + session.id).set('Authorization', user.token).expect(200);
+      expect(expired.body.data.status).toBe('completed');
+    } finally { clock = original; }
+  });
+
+  it('handles concurrent duplicate writes and verifies report evidence in a time-based session', async () => {
     const user = await register('Concurrency Tester');
+    const configured = await prepared(user);
     const key = randomUUID();
-    const create = () => request(app).post(prefix + '/interviews').set('Authorization', user.token).set('Idempotency-Key', key).send(setup).expect(201);
+    const create = () => request(app).post(prefix + '/interviews').set('Authorization', user.token).set('Idempotency-Key', key).send(configured).expect(201);
     const [first, other] = await Promise.all([create(), create()]);
     const initial = first.body.data;
     const path = prefix + '/interviews/' + initial.id;
@@ -220,7 +285,8 @@ describe('private interview API', () => {
     expect(b.body.data.turns).toHaveLength(2);
     await answer(submission, { ...body, text: 'Different answer' }).expect(409);
     const resumed = await request(app).get(path).set('Authorization', user.token).expect(200);
-    expect(resumed.body.data.question.followUp).toBe(true);
+    expect(resumed.body.data.timeBased).toBe(true);
+    expect(resumed.body.data.question.text).not.toBe(session.question.text);
     expect(resumed.body.data.turns[1].answer).toBe(body.text);
     await answer(randomUUID(), body).expect(409);
     await request(app).post(path + '/finish').set('Authorization', user.token).expect(200);
@@ -232,6 +298,27 @@ describe('private interview API', () => {
     expect(report.data.status).toBe('ready');
     expect(report.data.dimensions).toHaveLength(7);
     expect(report.data.answers[0].grades[0].evidence.quote).toBe(body.text);
+  });
+
+  it('waits for the provider cooldown before retrying report grading', async () => {
+    const user = await register('Cooldown Candidate');
+    const input = await prepared(user);
+    const created = (await request(app).post(prefix + '/interviews').set('Authorization', user.token)
+      .set('Idempotency-Key', randomUUID()).send(input).expect(201)).body.data;
+    const path = prefix + '/interviews/' + created.id;
+    await request(app).post(path + '/answers').set('Authorization', user.token).set('Idempotency-Key', randomUUID())
+      .send({ action: 'answer', questionId: created.question.id, expectedRevision: created.revision, text: 'I build accessible React interfaces and verify their behavior with focused tests.' }).expect(200);
+    await request(app).post(path + '/finish').set('Authorization', user.token).expect(200);
+    const evaluate = vi.fn(ai.evaluate).mockRejectedValueOnce(new AppError(503, 'PROVIDER_RATE_LIMIT', 'Busy', 60000));
+    const worker = reportWorker(store, { ...ai, evaluate }, 10000);
+    await worker.tick();
+    const queued = (await store.interviews.get({ id: created.id }))!;
+    expect(queued.reportWake).toBeGreaterThan(Date.now() + 58000);
+    await worker.tick();
+    expect(evaluate).toHaveBeenCalledTimes(1);
+    await store.interviews.update({ id: created.id }, { reportWake: Date.now() - 1 });
+    await worker.tick(); await worker.tick();
+    expect((await store.interviews.get({ id: created.id }))?.reportStatus).toBe('ready');
   });
 
   it('transcribes bounded audio for the active interview owner when the fallback is configured', async () => {
@@ -246,9 +333,10 @@ describe('private interview API', () => {
     const withSpeech = createApp({ config: { ...config, OPENAI_API_KEY: 'test-key', AUDIO_TRANSCRIPTION_MODEL: 'gpt-transcribe' },
       store, ai, providerFetch });
     const owner = await register('Speech Example', withSpeech);
+    const configured = await prepared(owner, withSpeech);
     const stranger = await register('Other Speech Example', withSpeech);
     const created = await request(app).post(prefix + '/interviews').set('Authorization', owner.token).set('Idempotency-Key', randomUUID())
-      .send(setup).expect(201);
+      .send(configured).expect(201);
     const endpoint = prefix + '/interviews/' + created.body.data.id + '/transcription';
     const upload = (token: string) => request(withSpeech).post(endpoint).set('Origin', origin).set('Authorization', token)
       .attach('audio', Buffer.from('fixture audio bytes'), { filename: 'fixture.webm', contentType: 'audio/webm' });
@@ -277,8 +365,9 @@ describe('private interview API', () => {
     const withSpeech = createApp({ config: { ...config, AUDIO_TRANSCRIPTION_PROVIDER: 'gemini',
       GOOGLE_API_KEY: 'test-gemini-key', AUDIO_TRANSCRIPTION_MODEL: 'gemini-3.5-transcribe' }, store, ai, providerFetch });
     const owner = await register('Gemini Speech Example', withSpeech);
+    const configured = await prepared(owner, withSpeech);
     const created = await request(withSpeech).post(prefix + '/interviews').set('Authorization', owner.token)
-      .set('Idempotency-Key', randomUUID()).send(setup).expect(201);
+      .set('Idempotency-Key', randomUUID()).send(configured).expect(201);
     const endpoint = prefix + '/interviews/' + created.body.data.id + '/transcription';
     const upload = () => request(withSpeech).post(endpoint).set('Origin', origin).set('Authorization', owner.token)
       .attach('audio', audio, { filename: 'fixture.webm', contentType: 'video/webm' });
@@ -292,19 +381,25 @@ describe('private interview API', () => {
     expect(providerFetch).toHaveBeenCalledTimes(3);
   });
 
-  it('finalizes expired sessions and fails closed on missing provider output', async () => {
+  it('keeps an answer saved when generation fails and finalizes expired sessions', async () => {
     const original = clock;
     const user = await register('Timebox Tester');
+    const configured = await prepared(user);
     const unavailable = createApp({
-      config, store, ai: { ...ai, async plan() { throw new AppError(503, 'PROVIDER_UNAVAILABLE', 'Provider timed out.'); } },
+      config, store, ai: { ...ai, async nextQuestion() { throw new AppError(503, 'PROVIDER_UNAVAILABLE', 'Provider timed out.'); } },
     });
-    await request(unavailable).post(prefix + '/interviews').set('Authorization', user.token).set('Idempotency-Key', randomUUID()).send(setup).expect(503);
     const session = (await request(app).post(prefix + '/interviews').set('Authorization', user.token)
-      .set('Idempotency-Key', randomUUID()).send(setup).expect(201)).body.data;
+      .set('Idempotency-Key', randomUUID()).send(configured).expect(201)).body.data;
+    const saved = await request(unavailable).post(prefix + '/interviews/' + session.id + '/answers').set('Authorization', user.token)
+      .set('Idempotency-Key', randomUUID()).send({ action: 'answer', questionId: session.question.id, expectedRevision: session.revision,
+        text: 'I build accessible software with React and Node.js.' }).expect(200);
+    expect(saved.body.data.turns).toHaveLength(1);
+    expect(saved.body.data.question).toBeNull();
+    await request(app).post(prefix + '/interviews/' + session.id + '/next').set('Authorization', user.token).expect(200);
     clock += 21 * 60_000;
     try {
       const result = await request(app).get(prefix + '/interviews/' + session.id).set('Authorization', user.token).expect(200);
-      expect(result.body.data).toMatchObject({ status: 'completed', score: null, question: null, reportStatus: 'ready' });
+      expect(result.body.data).toMatchObject({ status: 'completed', score: null, question: null, reportStatus: 'queued' });
     } finally {
       clock = original;
     }

@@ -51,7 +51,7 @@ test('opens the video homepage publicly and carries a preparation track through 
     /^Overview/, /^How it works/, /^Preparation/, /^About/,
   ]);
   const interviews = preparation.getByRole('region', { name: 'Interview tracks' });
-  await expect(interviews.getByRole('link')).toHaveCount(6);
+  await expect(interviews.getByRole('link')).toHaveCount(17);
   await expect(preparation.getByRole('region', { name: 'Learning tracks' }).getByRole('link')).toHaveCount(5);
   await interviews.getByRole('link', { name: 'Practice System design', exact: true }).click();
   await expect(page).toHaveURL(/\/login$/);
@@ -75,7 +75,7 @@ test('opens the video homepage publicly and carries a preparation track through 
   await page.getByRole('button', { name: 'Create account' }).click();
   await expect(page).toHaveURL(/\/interviews\/new\?track=system-design$/);
   await expect(page.getByRole('heading', { name: 'New interview' })).toBeVisible();
-  await expect(page.getByRole('radio', { name: /System design/ })).toBeChecked();
+  await expect(page.getByRole('combobox', { name: 'Interview track', exact: true })).toHaveValue('system-design');
 
   await page.getByRole('button', { name: 'Sign out' }).click();
   await expect(page).toHaveURL(/\/login$/);
@@ -150,7 +150,7 @@ test('opens every interview track from the numeric loopback address and resumes 
   await signIn.getByLabel('Password', { exact: true }).fill(password);
   await signIn.getByRole('button', { name: 'Sign in' }).click();
   await expect(page).toHaveURL(alias.origin + '/interviews/new?track=frontend');
-  await expect(page.getByRole('radio', { name: /Frontend/ })).toBeChecked();
+  await expect(page.getByRole('combobox', { name: 'Interview track', exact: true })).toHaveValue('frontend');
   await page.reload();
   await expect(page.getByRole('heading', { name: 'New interview' })).toBeVisible();
 

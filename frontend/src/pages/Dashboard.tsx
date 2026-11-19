@@ -3,7 +3,7 @@ import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tansta
 import { Activity, ArrowDownRight, ArrowRight, AudioLines, BookOpen, ChartNoAxesCombined, ClipboardList, FileText, Plus, Timer, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import {
-  difficulties, trackLabels, tracks, type Difficulty, type InterviewSummary, type List, type Track, type Trends, type User,
+  difficulties, difficultyLabels, trackLabels, tracks, type Difficulty, type InterviewSummary, type List, type Track, type Trends, type User,
 } from '../../../shared/contracts.ts';
 import { PinnedSubjects, PrepHubProgress } from '../components/DashboardLearning.tsx';
 import { LearningTrackCards } from '../components/LearningTrackCards.tsx';
@@ -25,7 +25,7 @@ function InterviewRow({ interview, remove }: { interview: InterviewSummary; remo
     <div className="interview-cell">
       <span className="row-icon"><AudioLines size={19} aria-hidden /></span>
       <div><Link className="row-title" to={href}>{interview.role ?? trackLabels[interview.track]}</Link>
-      <small>{trackLabels[interview.track]} <span aria-hidden>·</span> {interview.difficulty} <span aria-hidden>·</span> {formatDate(interview.startedAt)}</small></div>
+      <small>{trackLabels[interview.practiceTrack ?? interview.track]} <span aria-hidden>·</span> {difficultyLabels[interview.difficulty]} <span aria-hidden>·</span> {formatDate(interview.startedAt)}</small></div>
     </div>
     <StatusPill active={active} />
     <span className="row-score">{interview.score === null ? '—' : interview.score + '%'}</span>
@@ -49,7 +49,7 @@ function PracticeTrend() {
         {tracks.map(value => <option key={value} value={value}>{trackLabels[value]}</option>)}
       </select></label>
       <label><span className="sr-only">Trend difficulty</span><select value={difficulty} onChange={event => setDifficulty(event.target.value as Difficulty)}>
-        {difficulties.map(value => <option key={value} value={value}>{value[0].toUpperCase() + value.slice(1)}</option>)}
+        {difficulties.map(value => <option key={value} value={value}>{difficultyLabels[value]}</option>)}
       </select></label>
     </div>
     {query.isPending ? <Loading label="Loading scores…" /> : query.isError ? <ErrorNotice error={query.error} retry={() => void query.refetch()} /> :

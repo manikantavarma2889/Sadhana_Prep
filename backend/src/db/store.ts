@@ -1,6 +1,6 @@
 import { createConnection, Schema, type Model } from 'mongoose';
 import type {
-  AnswerFeedback, InterviewSettings, Provider, Question, ReportStatus, Resume, RoleAnalysis,
+  AnswerFeedback, InterviewContext, InterviewSettings, Provider, Question, ReportStatus, Resume, RoleAnalysis,
   Status, Turn, User,
 } from '../../../shared/contracts.ts';
 
@@ -12,8 +12,8 @@ export type RefreshSession = {
   id: string; owner: string; tokenHash: string; oldHashes: string[]; expiresAt: Date; revoked: boolean;
   credentialVersion?: string;
 };
-export type SavedResume = Resume & { owner: string; sortKey: string };
-export type SavedAnalysis = RoleAnalysis & { owner: string; sortKey: string };
+export type SavedResume = Resume & { owner: string; sortKey: string; text?: string };
+export type SavedAnalysis = RoleAnalysis & { owner: string; sortKey: string; context?: InterviewContext; resumeSignature?: string };
 export type PlanItem = Question & { criterion: string };
 export type RecordedTurn = Turn & { criterion: string; planIndex: number };
 export type Interview = InterviewSettings & {
@@ -43,6 +43,8 @@ export type Interview = InterviewSettings & {
   reportWake: number | null;
   reportLease: string | null;
   score: number | null;
+  timeBased?: boolean;
+  context?: InterviewContext;
 };
 
 type RecordId = { id: string };
@@ -198,11 +200,13 @@ export async function connectStore(uri: string): Promise<Store> {
       credentialVersion: String,
     }, refreshIndexes);
     const resumes = collection<SavedResume>('resumes', {
-      owner: String, sortKey: String, label: String, skills: [String], createdAt: String,
+      owner: String, sortKey: String, label: String, skills: [String], createdAt: String, text: String,
     }, libraryIndexes);
     const analyses = collection<SavedAnalysis>('role_analyses', {
       owner: String, sortKey: String, title: String, resumeId: String, createdAt: String,
       required: [String], preferred: [String], matches: [String], gaps: [String], topics: [String],
+      preparation: Schema.Types.Mixed, context: Schema.Types.Mixed, resumeSignature: String, description: String,
+      resumeSummary: String, projects: [Schema.Types.Mixed], experience: [String],
     }, libraryIndexes);
     const mixed = Schema.Types.Mixed;
     const interviews = collection<Interview>('interview_sessions', {
@@ -211,6 +215,7 @@ export async function connectStore(uri: string): Promise<Store> {
       status: String, startedAt: String, deadlineAt: String, completedAt: String, revision: Number,
       planIndex: Number, plan: [mixed], question: mixed, turns: [mixed], submissions: [mixed], feedback: [mixed],
       failedTurns: [mixed], reportStatus: String, reportLease: String, reportWake: Number, score: Number,
+      timeBased: Boolean, context: mixed, practiceTrack: String,
     }, interviewIndexes);
     await Promise.all([accounts, refresh, resumes, analyses, interviews].map(({ model }) => model.init()));
     return {

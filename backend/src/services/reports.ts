@@ -4,14 +4,18 @@ import {
 } from '../../../shared/contracts.ts';
 import type { Interview, Store } from '../db/store.ts';
 import { draftSchema, type CoachingAI } from './ai/coaching.ts';
+import { AppError } from '../errors.ts';
 
 export const rubricVersion = 'forge-rubric-1';
 const maxAttempts = 3;
 
 export function verifyQuote(answer: string, quote: string, offset: number | null): Evidence | null {
   if (!quote.trim()) return null;
-  const start = offset ?? answer.indexOf(quote);
-  if (start < 0 || answer.slice(start, start + quote.length) !== quote) return null;
+  let start = offset ?? answer.indexOf(quote);
+  if (start < 0 || answer.slice(start, start + quote.length) !== quote) {
+    start = answer.indexOf(quote);
+    if (start < 0 || answer.indexOf(quote, start + 1) >= 0) return null;
+  }
   if (offset === null && answer.indexOf(quote, start + 1) >= 0) return null;
   return { start, end: start + quote.length, quote: answer.slice(start, start + quote.length) };
 }
@@ -89,7 +93,9 @@ export function reportWorker(store: Store, ai: CoachingAI, leaseMs: number) {
       }
       const failed = claimed.failedTurns.filter(item => item.turnId !== turn.id);
       try {
-        const review = verifyFeedback(turn, await ai.evaluate(turn, turn.criterion, claimed));
+        const review = verifyFeedback(turn, await ai.evaluate(turn, turn.criterion, {
+          ...claimed, difficulty: turn.question.difficulty ?? claimed.difficulty,
+        }));
         await store.interviews.update({ id: claimed.id, reportLease }, {
           feedback: [...claimed.feedback, review], failedTurns: failed,
           reportStatus: 'queued', reportWake: Date.now(), reportLease: null,
@@ -100,7 +106,8 @@ export function reportWorker(store: Store, ai: CoachingAI, leaseMs: number) {
           category: error instanceof Error ? error.name : 'UnknownError' }));
         await store.interviews.update({ id: claimed.id, reportLease }, {
           failedTurns: [...failed, { turnId: turn.id, attempts }], reportStatus: 'queued', reportLease: null,
-          reportWake: Date.now() + (attempts >= maxAttempts ? 0 : 750 * 2 ** attempts),
+          reportWake: Date.now() + (attempts >= maxAttempts ? 0 :
+            error instanceof AppError && error.code === 'PROVIDER_RATE_LIMIT' ? error.retryAfterMs ?? 60000 : 750 * 2 ** attempts),
         });
       }
     } finally {

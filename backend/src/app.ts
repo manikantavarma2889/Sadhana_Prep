@@ -16,7 +16,7 @@ import { authService, changePasswordSchema, loginSchema, profileSchema, refreshC
 import { answerSchema, cursorSchema, interviewService, keySchema, settingsSchema, trendsSchema } from './services/interviews.ts';
 import { learningDetail, learningOutline } from './services/learning/catalog.ts';
 import { createTranscriber } from './services/transcription.ts';
-import { analysisInput, resumeEdit, resumeService } from './services/resumes.ts';
+import { analysisInput, preparationInput, resumeEdit, resumeService } from './services/resumes.ts';
 
 type Context = { user: User; requestId: string };
 type ForgeResponse = Response<unknown, Context>;
@@ -208,6 +208,9 @@ export function createApp(options: { config: Config; store: Store; ai: CoachingA
   router.post('/role-analyses', limit(60_000, 6, true), async (request, response: ForgeResponse) => {
     envelope(response, await resumes.analyze(response.locals.user.id, body(analysisInput, request)), 201);
   });
+  router.post('/interview-preparations', limit(60_000, 6, true), async (request, response: ForgeResponse) => {
+    envelope(response, await resumes.prepare(response.locals.user.id, body(preparationInput, request)), 201);
+  });
   router.get('/role-analyses/:id', async (request, response: ForgeResponse) => {
     envelope(response, await resumes.analysis(response.locals.user.id, id(request)));
   });
@@ -242,6 +245,9 @@ export function createApp(options: { config: Config; store: Store; ai: CoachingA
   router.post('/interviews/:id/finish', async (request, response: ForgeResponse) => {
     envelope(response, await interview.finish(response.locals.user.id, id(request)));
   });
+  router.post('/interviews/:id/next', limit(60_000, 12, true), async (request, response: ForgeResponse) => {
+    envelope(response, await interview.nextQuestion(response.locals.user.id, id(request)));
+  });
   router.delete('/interviews/:id', async (request, response: ForgeResponse) => {
     await interview.remove(response.locals.user.id, id(request));
     response.sendStatus(204);
@@ -269,7 +275,10 @@ export function createApp(options: { config: Config; store: Store; ai: CoachingA
   }
   const handler: ErrorRequestHandler = (error, _request, response, next) => {
     if (response.headersSent) { next(error); return; }
-    if (error instanceof AppError) return sendError(response, error.status, error.code, error.message);
+    if (error instanceof AppError) {
+      if (error.retryAfterMs) response.setHeader('Retry-After', String(Math.ceil(error.retryAfterMs / 1000)));
+      return sendError(response, error.status, error.code, error.message);
+    }
     if (error instanceof z.ZodError) {
       const fields = error.issues.map(issue => issue.path.join('.')).filter(Boolean);
       return sendError(response, 400, 'INVALID_INPUT', fields.length

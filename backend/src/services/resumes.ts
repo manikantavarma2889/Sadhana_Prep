@@ -1,10 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import { fork } from 'node:child_process';
 import { z } from 'zod';
-import { maxUploadBytes, type List, type Resume, type RoleAnalysis } from '../../../shared/contracts.ts';
+import { difficulties, durations, tracks, trackLabels, maxUploadBytes, type List, type Resume, type RoleAnalysis } from '../../../shared/contracts.ts';
 import type { SavedAnalysis, SavedResume, Store } from '../db/store.ts';
 import { AppError, missing } from '../errors.ts';
 import type { CoachingAI } from './ai/coaching.ts';
+import { digest } from './auth.ts';
 
 const skillAliases: Record<string, string[]> = {
   JavaScript: ['javascript', 'ecmascript'], TypeScript: ['typescript'], React: ['react', 'reactjs', 'react.js'],
@@ -29,6 +30,30 @@ export const analysisInput = z.object({
   description: z.string().trim().min(20).max(8000),
   resumeId: z.uuid().optional(),
 }).strict();
+
+export const preparationInput = z.object({
+  track: z.enum(tracks), practiceTrack: z.enum(tracks.filter(track => track !== 'practice')).optional(),
+  difficulty: z.enum(difficulties), minutes: z.literal(durations), resumeId: z.uuid(),
+  title: z.string().trim().max(90).default(''), description: z.string().trim().max(8000).default(''),
+}).strict().superRefine((input, ctx) => {
+  if (input.track === 'practice') {
+    if (!input.practiceTrack) ctx.addIssue({ code: 'custom', path: ['practiceTrack'], message: 'Choose a practice subject.' });
+  } else {
+    if (input.title.length < 2) ctx.addIssue({ code: 'custom', path: ['title'], message: 'Enter a role title.' });
+    if (input.description.length < 20) ctx.addIssue({ code: 'custom', path: ['description'], message: 'Add the job description.' });
+    if (input.practiceTrack) ctx.addIssue({ code: 'custom', path: ['practiceTrack'], message: 'Practice subject is only used for practice interviews.' });
+  }
+});
+
+export function resumeSignature(resume: SavedResume) {
+  return digest(JSON.stringify({ text: resume.text, skills: resume.skills }));
+}
+
+export function resumeContent(text: string) {
+  return text.replace(/[\w.+-]+@[\w.-]+\.[a-z]{2,}/ig, '[email removed]')
+    .replace(/https?:\/\/[^\s]+/ig, '[link removed]')
+    .replace(/(?:\+?\d[\d ().-]{8,}\d)/g, value => (value.match(/\d/g)?.length ?? 0) >= 10 ? '[phone removed]' : value).slice(0, 24000);
+}
 
 function escapeRegex(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -96,8 +121,8 @@ async function pdfText(file: Express.Multer.File | undefined) {
   }
 }
 
-const exposedResume = ({ id, label, skills, createdAt }: SavedResume): Resume => ({ id, label, skills, createdAt });
-const exposedAnalysis = ({ owner: _owner, sortKey: _key, ...data }: SavedAnalysis): RoleAnalysis => data;
+const exposedResume = ({ id, label, skills, createdAt, text }: SavedResume): Resume => ({ id, label, skills, createdAt, hasContent: Boolean(text) });
+const exposedAnalysis = ({ owner: _owner, sortKey: _key, context: _context, resumeSignature: _signature, ...data }: SavedAnalysis): RoleAnalysis => data;
 
 export async function listLibrary<T extends { id: string; sortKey: string; owner: string }, R>(
   collection: { list(where: Partial<T>, options: { sort: keyof T & string; limit: number; before?: { field: keyof T & string; value: string } }): Promise<T[]> },
@@ -123,7 +148,7 @@ export function resumeService(store: Store, ai: CoachingAI) {
       const createdAt = new Date().toISOString();
       const label = (file?.originalname ?? 'Resume').split(/[\\/]/).at(-1)?.replace(/\.pdf$/i, '').trim().slice(0, 90) || 'Resume';
       return exposedResume(await store.resumes.insert({
-        id, owner, label, createdAt, sortKey: createdAt + '_' + id, skills: extractSkills(text),
+        id, owner, label, createdAt, sortKey: createdAt + '_' + id, skills: extractSkills(text), text: resumeContent(text),
       }));
     },
     async edit(owner: string, id: string, input: z.infer<typeof resumeEdit>) {
@@ -159,6 +184,42 @@ export function resumeService(store: Store, ai: CoachingAI) {
       return exposedAnalysis(await store.analyses.insert({
         id, owner, sortKey: createdAt + '_' + id, createdAt, title: input.title, resumeId: resume?.id ?? null,
         required, preferred, matches, gaps, topics,
+      }));
+    },
+    async prepare(owner: string, input: z.infer<typeof preparationInput>) {
+      const resume = await store.resumes.get({ owner, id: input.resumeId });
+      if (!resume) missing();
+      if (!resume.text) throw new AppError(422, 'RESUME_REUPLOAD_REQUIRED', 'Upload this resume again so its projects and experience can be analyzed.');
+      const subject = input.track === 'practice' ? input.practiceTrack! : input.track;
+      const title = input.title || trackLabels[subject] + ' practice';
+      const description = resumeContent(input.description || 'Resume-based practice in ' + trackLabels[subject] + '.');
+      const analyzed = await ai.analyze(description, resume.skills, resume.text, { track: input.track, difficulty: input.difficulty,
+        minutes: input.minutes, ...(input.practiceTrack ? { practiceTrack: input.practiceTrack } : {}), title });
+      const projects = analyzed.projects.filter(project => resume.text!.includes(project.evidence) &&
+        new RegExp('(?:^\\s*|\\bprojects?\\s*[:\\-]?\\s*)' + escapeRegex(project.name) + '(?=[\\s.,|:\\-]|$)', 'im').test(resume.text!))
+        .map(project => ({ ...project, summary: project.evidence, technologies: project.technologies.filter(technology => contains(resume.text!, technology)) }));
+      const experience = analyzed.experience.filter(item => resume.text!.includes(item));
+      const required = [...new Set(analyzed.required)].filter(skill => contains(description, skill) || extractSkills(description).includes(skill));
+      const preferred = [...new Set(analyzed.preferred)].filter(skill => !required.includes(skill) && contains(description, skill));
+      const matches = [...required, ...preferred].filter(skill => resume.skills.some(item => item.toLowerCase() === skill.toLowerCase()));
+      const gaps = required.filter(skill => !matches.includes(skill));
+      const roleSkills = new Set([...required, ...preferred]);
+      const focusedTopics = analyzed.topics.filter(topic => {
+        const namedSkills = extractSkills(topic);
+        return !roleSkills.size || !namedSkills.length || namedSkills.some(skill => roleSkills.has(skill));
+      });
+      const topics = [...new Set([...gaps, ...focusedTopics, ...matches,
+        ...(input.track === 'practice' && input.practiceTrack === 'technical' ? resume.skills : [])])].slice(0, 16);
+      if (!topics.length) topics.push(trackLabels[subject]);
+      const preparation = { track: input.track, difficulty: input.difficulty, minutes: input.minutes,
+        ...(input.practiceTrack ? { practiceTrack: input.practiceTrack } : {}) };
+      const id = randomUUID();
+      const createdAt = new Date().toISOString();
+      return exposedAnalysis(await store.analyses.insert({
+        id, owner, sortKey: createdAt + '_' + id, createdAt, title, resumeId: resume.id,
+        required, preferred, matches, gaps, topics, preparation, description, projects, experience, resumeSummary: analyzed.resumeSummary,
+        resumeSignature: resumeSignature(resume),
+        context: { title, description, resumeText: resume.text, skills: resume.skills, topics, projects, experience, resumeSummary: analyzed.resumeSummary },
       }));
     },
     async removeAnalysis(owner: string, id: string) {

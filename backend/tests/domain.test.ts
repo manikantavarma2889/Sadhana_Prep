@@ -1,14 +1,40 @@
 import { describe, it, expect } from 'vitest';
-import type { Turn } from '../../shared/contracts.ts';
+import type { Question, Turn } from '../../shared/contracts.ts';
+import { questionPacing } from '../../shared/interview-pacing.ts';
 import { loadConfig } from '../src/config.ts';
-import { repeatsQuestion } from '../src/services/ai/coaching.ts';
+import { nextFocus, repeatsQuestion } from '../src/services/ai/coaching.ts';
 import { extractSkills, localRoleAnalysis } from '../src/services/resumes.ts';
 import { verifyFeedback, verifyQuote } from '../src/services/reports.ts';
 
 describe('interview domain', () => {
+  it('keeps easy sessions easy, progresses higher levels and caps secondary categories', () => {
+    for (const difficulty of ['foundation', 'intermediate', 'advanced'] as const) {
+      const settings = { track: 'frontend' as const, difficulty, minutes: 15 as const };
+      const asked: Question[] = [];
+      for (let index = 0; index < 40; index++) {
+        const policy = questionPacing(settings, asked);
+        const expected = difficulty === 'foundation' ? 'foundation' : difficulty === 'intermediate'
+          ? index < 2 ? 'foundation' : 'intermediate' : index < 1 ? 'foundation' : index < 3 ? 'intermediate' : 'advanced';
+        expect(policy.difficulty).toBe(expected);
+        asked.push({ id: String(index), text: 'Question ' + index, topic: 'Topic', followUp: false, ...policy });
+      }
+      expect(asked.filter(question => question.category === 'resume')).toHaveLength(3);
+      expect(asked.filter(question => question.category === 'behavioral')).toHaveLength(3);
+      expect(asked.filter(question => question.category === 'track').length).toBeGreaterThan(30);
+    }
+  });
   it('rejects repeated questions even when punctuation changes', () => {
     expect(repeatsQuestion('How does a queue recover?', ['How does a queue recover!'])).toBe(true);
     expect(repeatsQuestion('When would you use tabs?', ['How does a queue recover!'])).toBe(false);
+  });
+  it('uses basic concepts for Easy questions and rotates away from asked topics', () => {
+    const settings = { track: 'frontend' as const, difficulty: 'foundation' as const, minutes: 15 as const };
+    const context = { title: 'Frontend Engineer', description: 'React role', resumeText: 'Resume content', skills: ['React'],
+      topics: ['advanced rendering optimization'], projects: [], experience: [], resumeSummary: '' };
+    const first = nextFocus(settings, context, [], 'track');
+    expect(first).not.toBe('advanced rendering optimization');
+    const second = nextFocus(settings, context, [{ id: 'one', text: 'Earlier question', topic: first, category: 'track', followUp: false }], 'track');
+    expect(second).not.toBe(first);
   });
 
   it('recognizes literal technologies and separates preferred skills', () => {
@@ -22,6 +48,8 @@ describe('interview domain', () => {
     expect(verifyQuote('Cache cache cache', 'cache', null)).toBeNull();
     expect(verifyQuote('Cache cache cache', 'cache', 6)).toEqual({ start: 6, end: 11, quote: 'cache' });
     expect(verifyQuote('use React', 'Use React', 0)).toBeNull();
+    expect(verifyQuote('use React', 'React', 0)).toEqual({ start: 4, end: 9, quote: 'React' });
+    expect(verifyQuote('Cache cache cache', 'cache', 0)).toBeNull();
     expect(verifyQuote('😀 React', 'React', 3)?.start).toBe(3);
   });
 

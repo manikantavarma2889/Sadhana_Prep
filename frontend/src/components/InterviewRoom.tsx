@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useEffectEvent, useRef, useState, type FormEvent, type MouseEvent } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { trackLabels, type InterviewSession, type Question } from '../../../shared/contracts.ts';
+import { difficultyLabels, trackLabels, type InterviewSession, type Question } from '../../../shared/contracts.ts';
 import { openingQuestion } from '../../../shared/interview-opening.ts';
 import { useInterviewCamera } from '../features/voice/interview-media.tsx';
 import { useVoice } from '../features/voice/useVoice.ts';
@@ -76,9 +76,11 @@ export function InterviewRoom({ interview, question, seconds, expired, end, endi
   const index = Math.min(interview.planned, answeredPrompts + (question.followUp ? 0 : 1));
   const spokenPrompt = (question.followUp ? 'Follow-up. ' : 'Question ' + index + '. ') + question.text;
   const welcome = 'Hi ' + candidate + ', I’m Sadhana, your AI interviewer. Today is a ' +
-    trackLabels[interview.track].toLowerCase() + ' practice' + (interview.role ? ' for the ' + interview.role + ' position' : '') +
-    ' at ' + interview.difficulty + ' level. We’ll go through ' + interview.planned +
-    ' questions. Answer out loud or type in the chat, and press Done answering when you finish.';
+    trackLabels[interview.practiceTrack ?? interview.track].toLowerCase() + ' practice' +
+    (interview.role && interview.track !== 'practice' ? ' for the ' + interview.role + ' position' : '') +
+    ' at ' + difficultyLabels[interview.difficulty].toLowerCase() + ' level. ' +
+    (interview.timeBased ? 'We’ll practice for ' + interview.minutes + ' minutes, with questions based on your resume and selected track. ' : 'We’ll go through ' + interview.planned + ' questions. ') +
+    'Answer out loud or type in the chat, and press Done answering when you finish.';
   const remaining = Math.min(interview.minutes * 60, Math.max(0, seconds ?? interview.minutes * 60));
   const elapsed = interview.minutes * 60 - remaining;
   const metrics = interviewMetrics(interview.turns);
@@ -257,7 +259,7 @@ export function InterviewRoom({ interview, question, seconds, expired, end, endi
       <div className="call-body">
         <div className="stage">
           <div className={'tile main' + (voice.speaking ? ' speaking' : answer.isPending ? ' thinking' : '')}>
-            <div className="qpill"><MeetIcon name="quiz" /><span>{warmUp ? 'Warm-up' : 'Question ' + index + ' of ' + interview.planned}</span>
+            <div className="qpill"><MeetIcon name="quiz" /><span>{warmUp ? 'Warm-up' : 'Question ' + index + (interview.timeBased ? '' : ' of ' + interview.planned)}</span>
               {question.followUp && <span className="follow-up-chip">Follow-up</span>}
             </div>
             <div className={'status' + (recording ? ' user' : answer.isPending ? ' think' : voice.speaking ? ' ai' : '') +
@@ -322,11 +324,12 @@ export function InterviewRoom({ interview, question, seconds, expired, end, endi
             <div className="card"><h4>INTERVIEW</h4>
               <div className="kv"><span>Type</span><b>{trackLabels[interview.track]}</b></div>
               <div className="kv"><span>Role</span><b>{interview.role ?? 'General practice'}</b></div>
-              <div className="kv"><span>Level</span><b className="meet-title-case">{interview.difficulty}</b></div>
+              <div className="kv"><span>Level</span><b>{difficultyLabels[interview.difficulty]}</b></div>
               <div className="kv"><span>Duration</span><b>{interview.minutes} minutes</b></div>
-              <div className="prog" role="progressbar" aria-label="Questions covered" aria-valuenow={interview.covered} aria-valuemax={interview.planned}>
-                <i style={{ width: 100 * interview.covered / interview.planned + '%' }} /></div>
-              <div className="meet-progress-label">{interview.covered} of {interview.planned} questions covered</div>
+              <div className="prog" role="progressbar" aria-label={interview.timeBased ? 'Session time elapsed' : 'Questions covered'}
+                aria-valuenow={interview.timeBased ? elapsed : interview.covered} aria-valuemax={interview.timeBased ? interview.minutes * 60 : interview.planned}>
+                <i style={{ width: 100 * (interview.timeBased ? elapsed / (interview.minutes * 60) : interview.covered / interview.planned) + '%' }} /></div>
+              <div className="meet-progress-label">{interview.timeBased ? interview.covered + ' questions answered · time-based session' : interview.covered + ' of ' + interview.planned + ' questions covered'}</div>
             </div>
             <div className="card"><h4>LIVE METRICS</h4>
               <div className="kv"><span>Answers given</span><b>{metrics.count}</b></div>

@@ -2,7 +2,7 @@ import { interviewQuestionCounts, type InterviewSettings, type Track } from '../
 
 type BankItem = [topic: string, question: string, criterion: string];
 
-const bank: Record<Track, BankItem[]> = {
+const bank: Partial<Record<Track, BankItem[]>> = {
   frontend: [
     ['React state', 'A filterable list resets its selected row after a search. How would you locate and fix the state bug?', 'Distinguishes local and server state, stable keys and state ownership.'],
     ['Accessibility', 'How would you implement a dialog that works for keyboard and screen-reader users?', 'Covers semantics, focus entry, containment, dismissal and return.'],
@@ -54,7 +54,7 @@ const bank: Record<Track, BankItem[]> = {
 };
 
 export function localPlan(settings: InterviewSettings, topics: string[]) {
-  const questions = bank[settings.track].map(([topic, text, criterion]) => ({ topic, text, criterion }));
+  const questions = (bank[settings.practiceTrack ?? settings.track] ?? bank.mern!).map(([topic, text, criterion]) => ({ topic, text, criterion }));
   if (topics[0] && settings.track !== 'behavioral') {
     const topic = topics[0];
     questions.unshift({

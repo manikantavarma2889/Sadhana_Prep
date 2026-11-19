@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom';
-import { dimensions, trackLabels, type AnswerFeedback, type InterviewReport, type InterviewSession, type Turn } from '../../../shared/contracts.ts';
+import { dimensions, difficultyLabels, trackLabels, type AnswerFeedback, type InterviewReport, type InterviewSession, type Turn } from '../../../shared/contracts.ts';
 import { openingQuestion, openingTopic } from '../../../shared/interview-opening.ts';
 import { InterviewRoom, type InterviewPanel } from '../components/InterviewRoom.tsx';
 import { interviewMetrics, interviewerName } from '../components/InterviewMedia.tsx';
@@ -52,9 +52,18 @@ export function InterviewPage() {
     mutationFn: () => api<InterviewSession>(path(id) + '/finish', { method: 'POST' }),
     onSuccess: commit,
   });
+  const next = useMutation({ mutationFn: () => api<InterviewSession>(path(id) + '/next', { method: 'POST' }), onSuccess: commit });
   if (query.isPending) return <Loading label="Loading interview…" />;
   if (query.isError || !interview) return <ErrorNotice error={query.error} retry={() => void refetch()} />;
-  if (!active || !interview.question) return <Navigate to={path(id) + '/report'} replace state={state} />;
+  if (!active) return <Navigate to={path(id) + '/report'} replace state={state} />;
+  if (!interview.question) return <section className="panel form-panel">
+    <h1>Your answer is saved</h1><p>Sadhana could not prepare the next question. Retry to continue within your remaining session time.</p>
+    <p>{Math.ceil((seconds ?? 0) / 60)} minutes remaining.</p>
+    <ErrorNotice error={next.error ?? finish.error} />
+    <div className="button-group"><button className="button button-primary" onClick={() => next.mutate()} disabled={next.isPending || finish.isPending}>
+      {next.isPending ? 'Preparing next question…' : 'Retry next question'}</button>
+    <button className="button button-secondary" onClick={() => finish.mutate()} disabled={finish.isPending || next.isPending}>End interview</button></div>
+  </section>;
   const warmUp = state?.joinedFromLobby === true && !interview.turns.length && interview.question.topic !== openingTopic &&
     state?.warmUpAnswer === undefined;
   const question = warmUp
@@ -93,7 +102,7 @@ function AnswerReview({ turn, feedback, pending }: { turn: Turn; feedback?: Answ
 function downloadTranscript(session: InterviewSession, report?: InterviewReport, warmUpAnswer?: string) {
   const transcript = [
     interviewerName + ' interview transcript',
-    trackLabels[session.track] + ' · ' + (session.role ?? 'General practice') + ' · ' + session.difficulty,
+    trackLabels[session.practiceTrack ?? session.track] + ' · ' + (session.role ?? 'General practice') + ' · ' + difficultyLabels[session.difficulty],
     'Score: ' + (report?.overall == null ? 'Unavailable' : report.overall + '/100'),
     '',
     ...(warmUpAnswer ? ['Warm-up: ' + openingQuestion(session.role), 'A: ' + warmUpAnswer, ''] : []),
@@ -147,13 +156,13 @@ export function ReportPage() {
   return <div className="interview-meet"><div className="modal meet-summary">
     <section className="sum meet-report-card" aria-labelledby="meet-report-title">
       <h1 id="meet-report-title">Interview summary</h1>
-      <p className="sub">{trackLabels[session.track]} · {session.role ?? 'General practice'} · <span className="meet-title-case">{session.difficulty}</span></p>
+      <p className="sub">{trackLabels[session.practiceTrack ?? session.track]} · {session.role ?? 'General practice'} · {difficultyLabels[session.difficulty]}</p>
       <div className="top">
         <div className="ring" style={{ background: 'conic-gradient(var(--blue) ' + (score ?? 0) + '%, #e1e5ea 0)' }}>
           <div><span>{score ?? '—'}<small>{score === null && !busy && !report.isPending ? 'Unscored' : rating}</small></span></div>
         </div>
         <div className="stats">
-          <div><b>{session.covered}/{session.planned}</b><span>Questions covered</span></div>
+          <div><b>{session.timeBased ? session.covered : session.covered + '/' + session.planned}</b><span>Questions answered</span></div>
           <div><b>{metrics.average}</b><span>Avg. words per answer</span></div>
           <div><b>{metrics.fillers}</b><span>Filler words</span></div>
           <div><b>{session.minutes} min</b><span>Session duration</span></div>

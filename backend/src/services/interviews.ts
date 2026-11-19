@@ -6,15 +6,17 @@ import {
 } from '../../../shared/contracts.ts';
 import { DuplicateRecord, type Interview, type PlanItem, type RecordedTurn, type Store } from '../db/store.ts';
 import { openingQuestion, openingTopic } from '../../../shared/interview-opening.ts';
+import { questionPacing } from '../../../shared/interview-pacing.ts';
 import { AppError, conflict, missing } from '../errors.ts';
 import { digest } from './auth.ts';
-import { repeatsQuestion, type CoachingAI } from './ai/coaching.ts';
-import { listLibrary } from './resumes.ts';
+import { nextFocus, normalizeQuestion, repeatsQuestion, type CoachingAI } from './ai/coaching.ts';
+import { listLibrary, resumeSignature } from './resumes.ts';
 import { reportData, rubricVersion } from './reports.ts';
 
 export const settingsSchema = z.object({
   track: z.enum(tracks), difficulty: z.enum(difficulties),
-  minutes: z.literal(durations), analysisId: z.uuid().optional(),
+  minutes: z.literal(durations), analysisId: z.uuid(),
+  practiceTrack: z.enum(tracks.filter(track => track !== 'practice')).optional(),
 }).strict();
 const revisionSchema = z.object({ questionId: z.uuid(), expectedRevision: z.number().int().nonnegative() });
 export const answerSchema = z.discriminatedUnion('action', [
@@ -25,8 +27,8 @@ export const trendsSchema = z.object({ track: z.enum(tracks).default('mern'), di
 export const cursorSchema = z.object({ cursor: z.string().regex(/^\d{4}-\d\d-\d\dT[\d:.]+Z_[a-f0-9-]{36}$/).optional() });
 export const keySchema = z.string().regex(/^[a-zA-Z0-9_-]{12,100}$/);
 
-function displayQuestion({ id, text, topic, followUp }: Question): Question {
-  return { id, text, topic, followUp };
+function displayQuestion({ id, text, topic, followUp, category, difficulty }: Question): Question {
+  return { id, text, topic, followUp, ...(category ? { category } : {}), ...(difficulty ? { difficulty } : {}) };
 }
 
 function displayTurn({ id, question, answer, createdAt }: Turn): Turn {
@@ -37,7 +39,8 @@ function summary(interview: Interview): InterviewSummary {
   const { id, track, difficulty, minutes, role, status, startedAt, completedAt, reportStatus, score, provider } = interview;
   const covered = new Set(interview.turns.filter(turn => turn.answer !== null).map(turn => turn.planIndex)).size;
   return { id, track, difficulty, minutes, role, status, startedAt, completedAt, planned: interview.plan.length,
-    covered, reportStatus, score, provider };
+    covered, reportStatus, score, provider, ...(interview.timeBased ? { timeBased: true } : {}),
+    ...(interview.practiceTrack ? { practiceTrack: interview.practiceTrack } : {}) };
 }
 
 function session(interview: Interview): InterviewSession {
@@ -80,6 +83,32 @@ export function interviewService(store: Store, ai: CoachingAI, now = Date.now) {
     return session(record);
   }
 
+  async function nextQuestion(owner: string, id: string): Promise<InterviewSession> {
+    const record = await reconcile(await get(owner, id));
+    if (!record.timeBased || record.status !== 'active' || record.question) return session(record);
+    if (!record.context) throw new AppError(503, 'CONTEXT_UNAVAILABLE', 'Interview context could not be loaded.');
+    if (record.provider !== ai.provider || record.model !== ai.model) {
+      throw new AppError(503, 'PROVIDER_CHANGED', 'Restore this interview’s provider before continuing.');
+    }
+    const pacing = questionPacing(record, record.plan);
+    const selected = await ai.nextQuestion({ settings: record, context: record.context, ...pacing,
+      focusTopic: nextFocus({ ...record, difficulty: pacing.difficulty }, record.context, record.plan, pacing.category),
+      remainingSeconds: Math.max(0, Math.floor((Date.parse(record.deadlineAt) - now()) / 1000)),
+      covered: record.plan.map(question => question.text), previous: record.turns });
+    if (record.plan.some(question => normalizeQuestion(question.text) === normalizeQuestion(selected.text)) ||
+      repeatsQuestion(selected.text, record.plan.filter(question => question.topic.toLowerCase() === selected.topic.toLowerCase()).map(question => question.text))) {
+      throw new AppError(503, 'REPEATED_QUESTION', 'The next question repeated an earlier prompt. Try again.');
+    }
+    const current = await reconcile(await get(owner, id));
+    if (current.status !== 'active' || current.question) return session(current);
+    const question: PlanItem = { ...selected, id: randomUUID(), followUp: false,
+      category: pacing.category, difficulty: pacing.difficulty };
+    const saved = await store.interviews.update({ owner, id, revision: record.revision, status: 'active' }, {
+      question, plan: [...record.plan, question], planIndex: record.plan.length, revision: record.revision + 1,
+    });
+    return session(saved ?? await get(owner, id));
+  }
+
   return {
     async list(owner: string, cursor?: string) {
       const page = await listLibrary(store.interviews, owner, cursor, item => item);
@@ -90,18 +119,25 @@ export function interviewService(store: Store, ai: CoachingAI, now = Date.now) {
       const hash = digest(JSON.stringify(input));
       const existing = await store.interviews.get({ owner, createKey: key });
       if (existing) return replayCreate(await reconcile(existing), hash);
-      const analysis = input.analysisId ? await store.analyses.get({ owner, id: input.analysisId }) : null;
-      if (input.analysisId && !analysis) missing();
-      const role = analysis?.title ?? null;
-      const topics = analysis?.topics ?? [];
-      const questions = await ai.plan(input, topics, role);
-      if (!questions.length) throw new AppError(503, 'INVALID_PLAN', 'The provider returned an empty interview. Try again.');
+      const analysis = await store.analyses.get({ owner, id: input.analysisId });
+      if (!analysis) missing();
+      const preparation = { track: input.track, difficulty: input.difficulty, minutes: input.minutes,
+        ...(input.practiceTrack ? { practiceTrack: input.practiceTrack } : {}) };
+      if (!analysis.preparation || !analysis.context || JSON.stringify(analysis.preparation) !== JSON.stringify(preparation)) {
+        throw new AppError(409, 'ANALYSIS_REQUIRED', 'Analyze the complete setup before starting or changing interview settings.');
+      }
+      const resume = analysis.resumeId ? await store.resumes.get({ owner, id: analysis.resumeId }) : null;
+      if (!resume || resumeSignature(resume) !== analysis.resumeSignature) {
+        throw new AppError(409, 'RESUME_CHANGED', 'Select and analyze your current resume before starting.');
+      }
+      const role = analysis.title;
+      const topics = analysis.topics;
       const opener: PlanItem = {
         topic: openingTopic, text: openingQuestion(role),
         criterion: 'Introduces relevant experience and explains specific motivation for the target role.',
-        id: randomUUID(), followUp: false,
+        id: randomUUID(), followUp: false, category: 'introduction', difficulty: 'foundation',
       };
-      const plan = [opener, ...questions.slice(0, -1).map(question => ({ ...question, id: randomUUID(), followUp: false }))];
+      const plan = [opener];
       const id = randomUUID();
       const start = now();
       const startedAt = new Date(start).toISOString();
@@ -112,6 +148,7 @@ export function interviewService(store: Store, ai: CoachingAI, now = Date.now) {
           deadlineAt: new Date(start + input.minutes * 60_000).toISOString(), startedAt, completedAt: null,
           turns: [], submissions: [], feedback: [], failedTurns: [], reportStatus: 'unavailable', reportWake: null,
           reportLease: null, score: null, provider: ai.provider, model: ai.model, rubric: rubricVersion,
+          timeBased: true, context: analysis.context,
         }));
       } catch (error) {
         if (!(error instanceof DuplicateRecord)) throw error;
@@ -131,6 +168,24 @@ export function interviewService(store: Store, ai: CoachingAI, now = Date.now) {
       }
       const current = interview.question;
       const answer = input.action === 'answer' ? input.text : null;
+      if (interview.timeBased) {
+        const timestamp = now();
+        const turns = [...interview.turns, {
+          id: randomUUID(), question: displayQuestion(current), answer, createdAt: new Date(timestamp).toISOString(),
+          criterion: current.criterion, planIndex: interview.planIndex,
+        }];
+        const revision = interview.revision + 1;
+        const saved = await store.interviews.update({ owner, id, revision: interview.revision, status: 'active' }, {
+          revision, turns, question: null, submissions: [...interview.submissions, { key, hash, revision }],
+          ...(timestamp >= Date.parse(interview.deadlineAt) ? completion(turns, timestamp) : {}),
+        });
+        if (!saved) return replayAnswer(await get(owner, id), key, hash) ?? conflict('The interview changed. Refresh before submitting another answer.');
+        try { return await nextQuestion(owner, id); }
+        catch (error) {
+          if (!(error instanceof AppError) || error.status !== 503) throw error;
+          return session(await reconcile(await get(owner, id)));
+        }
+      }
       let followUp: PlanItem | null = null;
       if (answer && !current.followUp && current.topic !== openingTopic && ai.provider === interview.provider && ai.model === interview.model) {
         const covered = [...interview.plan, ...interview.turns.map(turn => turn.question)].map(question => question.text);
@@ -165,6 +220,7 @@ export function interviewService(store: Store, ai: CoachingAI, now = Date.now) {
       const duplicate = replayAnswer(await get(owner, id), key, hash);
       return duplicate ?? conflict('The interview changed. Refresh before submitting another answer.');
     },
+    nextQuestion,
     async finish(owner: string, id: string): Promise<InterviewSession> {
       for (let attempt = 0; attempt < 3; attempt++) {
         const interview = await get(owner, id);

@@ -30,15 +30,17 @@ List endpoints accept an optional `cursor` query parameter and return `{ items, 
 | Method | Path | Input or result |
 | --- | --- | --- |
 | GET | `/interviews` | Cursor-paginated interview history. |
-| POST | `/interviews` | Requires `Idempotency-Key`. Accepts `track`, `difficulty`, `minutes` and optional `analysisId`. |
+| POST | `/interview-preparations` | Analyze a required owned resume with track, optional practiceTrack, difficulty, minutes, title and description. Role tracks require title and description; practice mode can omit both. Returns a bound analysis. |
+| POST | `/interviews` | Requires `Idempotency-Key`, `track`, `difficulty`, `minutes` and a matching `analysisId`. Practice mode also sends its analyzed `practiceTrack`. |
 | GET, DELETE | `/interviews/:id` | Resume or review persisted work, or delete the interview and associated report. |
 | POST | `/interviews/:id/answers` | Requires `Idempotency-Key`. Accepts `questionId`, `expectedRevision`, `action: "answer"` and `text`, or `action: "skip"` without text. |
+| POST | `/interviews/:id/next` | Retry a pending next question after an answer has been saved. No extra answer submission is needed. |
 | POST | `/interviews/:id/finish` | Finish or return the existing terminal session. |
 | GET | `/interviews/:id/report` | Report state, dimensions, aggregate score, coverage and verified answer evidence. |
 | POST | `/interviews/:id/report/retry` | Reschedules eligible report work. |
 | GET | `/metrics/interview-trends` | Filter by `track` and `difficulty` to return up to 20 comparable scores. |
 
-Tracks are `frontend`, `backend`, `mern`, `javascript`, `system-design` and `behavioral`. Difficulties are `foundation`, `intermediate` and `advanced`. Allowed durations are 10, 20, 30 and 45 minutes. Idempotency keys use 12–100 ASCII letters, numbers, underscores or hyphens. Reusing a key with different input returns `409`. A safe retry returns the current state of the original session.
+Tracks are `practice`, `frontend`, `backend`, `mern`, `javascript`, `java`, `python`, `technical`, `dsa`, `system-design`, `database`, `devops`, `cloud`, `mobile`, `data-science`, `qa` and `behavioral`. Practice mode requires a non-practice `practiceTrack`. Difficulties are `foundation` (Easy), `intermediate` and `advanced` (Hard). Allowed durations are 10, 15, 20, 30 and 45 minutes. Creating an interview requires a matching `analysisId` from `/interview-preparations`. Idempotency keys use 12–100 ASCII letters, numbers, underscores or hyphens. Reusing a key with different input returns `409`. A safe retry returns the current state of the original session.
 
 Invalid data uses `400`, unauthorized requests use `401`, missing or unowned resources use `404`, unsupported uploads use `415`, oversized uploads use `413`, rate limits use `429` and unavailable model calls use `503`.
 

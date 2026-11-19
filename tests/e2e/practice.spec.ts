@@ -12,6 +12,15 @@ async function register(page: Page) {
   await expect(page.getByRole('heading', { name: 'Welcome, Alex' })).toBeVisible();
 }
 
+async function preparePractice(page: Page) {
+  await page.getByRole('combobox', { name: 'Interview track', exact: true }).selectOption('practice');
+  await page.getByRole('combobox', { name: 'Practice subject', exact: true }).selectOption('mern');
+  await page.getByLabel('Upload interview resume').setInputFiles({ name: 'practice.pdf', mimeType: 'application/pdf', buffer: syntheticResume() });
+  await expect(page.getByRole('button', { name: 'Analyze interview', exact: true })).toBeEnabled();
+  await page.getByRole('button', { name: 'Analyze interview', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Start interview', exact: true })).toBeEnabled();
+}
+
 test('uses a resume in an interview, safely retries a lost response and shows answer evidence', async ({ page }) => {
   await page.addInitScript(() => {
     if (!navigator.mediaDevices) return;
@@ -31,13 +40,17 @@ test('uses a resume in an interview, safely retries a lost response and shows an
   await page.getByRole('button', { name: 'Upload and extract' }).click();
   await expect(page.getByText('TypeScript', { exact: true })).toBeVisible();
   await page.getByRole('link', { name: 'New interview', exact: true }).click();
+  await page.getByRole('combobox', { name: 'Interview track', exact: true }).selectOption('mern');
   await page.getByLabel('Role title', { exact: true }).fill('Full-stack Engineer');
   await page.getByLabel('Job description', { exact: true }).fill('React and Docker are required. Preferred qualifications include Kubernetes.');
   await page.getByRole('combobox', { name: 'Resume profile', exact: true }).selectOption({ label: 'example' });
-  await page.getByRole('button', { name: 'Analyze job description' }).click();
-  await expect(page.getByText('Skill gaps to practice')).toBeVisible();
+  await page.getByRole('button', { name: 'Analyze interview' }).click();
+  await expect(page.getByText('Role skills to prepare')).toBeVisible();
   await page.getByLabel('Duration').selectOption('30');
-  await expect(page.getByText('5 planned questions.', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Start interview' })).toBeDisabled();
+  await page.getByRole('button', { name: 'Analyze interview' }).click();
+  await expect(page.getByRole('button', { name: 'Start interview' })).toBeEnabled();
+  await expect(page.getByText(/planned questions/)).toHaveCount(0);
   await page.getByRole('button', { name: 'Start interview' }).click();
   const lobby = page.getByRole('dialog', { name: 'Ready to join?' });
   await expect(lobby.getByText('Sadhana AI is ready', { exact: true })).toBeVisible();
@@ -51,12 +64,12 @@ test('uses a resume in an interview, safely retries a lost response and shows an
   await lobby.getByRole('checkbox', { name: 'Let Sadhana AI speak questions aloud' }).uncheck();
   await lobby.getByRole('button', { name: 'Ask to join' }).click();
   await expect(page.getByRole('heading', { name: /Question 1.*interested in the Full-stack Engineer role/ })).toBeVisible();
-  await expect(page.getByText('Question 1 of 5', { exact: true })).toBeVisible();
+  await expect(page.getByText('Question 1', { exact: true })).toBeVisible();
   await expect(page.locator('.tile.self video')).toBeVisible();
   await page.getByRole('button', { name: 'Activities' }).click();
   await expect(page.getByRole('complementary', { name: 'Activities' }).getByText('30 minutes', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Skip question' }).click();
-  await expect(page.getByRole('heading', { name: /How would you use Docker/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /React props/ })).toBeVisible();
   await page.getByRole('button', { name: 'Chat', exact: true }).click();
   const answer = 'I would build the image once.';
   await page.getByLabel('Your answer').fill(answer);
@@ -72,12 +85,11 @@ test('uses a resume in an interview, safely retries a lost response and shows an
   await expect(page.getByRole('alert')).toContainText('Could not reach Sadhana Prep');
   await expect(page.getByLabel('Your answer')).toHaveValue(answer);
   await page.getByRole('button', { name: 'Submit answer' }).click();
-  await expect(page.getByText('Follow-up', { exact: true })).toBeVisible();
-  await expect(page.getByText('Question 2 of 5', { exact: true })).toBeVisible();
+  await expect(page.getByText('Question 3', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Turn off camera' }).click();
   await expect.poll(() => page.evaluate(() => (window as Window & { interviewTestTrack?: MediaStreamTrack }).interviewTestTrack?.readyState)).toBe('ended');
   await page.reload();
-  await expect(page.getByText('Follow-up', { exact: true })).toBeVisible();
+  await expect(page.getByText('Question 3', { exact: true })).toBeVisible();
   await expect(page.locator('.meet-turn')).toHaveCount(2);
   await page.getByRole('button', { name: 'End interview' }).click();
   await expect(page.getByRole('heading', { name: 'Interview summary' })).toBeVisible();
@@ -101,6 +113,14 @@ test('keeps text answers available when microphone permission is denied', async 
   });
   await register(page);
   await page.getByRole('link', { name: 'New interview', exact: true }).click();
+  await expect(page.getByRole('combobox', { name: 'Interview track', exact: true })).toHaveValue('practice');
+  await expect(page.getByRole('combobox', { name: 'Interview track', exact: true }).locator('option').first()).toHaveText('Practice interview');
+  await expect(page.getByRole('combobox', { name: 'Interview track', exact: true }).locator('option[value="java"]')).toHaveCount(1);
+  await expect(page.getByRole('button', { name: 'Start interview' })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Analyze interview' })).toBeDisabled();
+  await expect(page.getByLabel('Job description', { exact: true })).toHaveCount(0);
+  await page.getByRole('combobox', { name: 'Duration', exact: true }).selectOption('15');
+  await preparePractice(page);
   await page.getByRole('button', { name: 'Start interview' }).click();
   await page.getByRole('button', { name: 'Other ways to join' }).click();
   await page.getByRole('checkbox', { name: 'Let Sadhana AI speak questions aloud' }).uncheck();
@@ -111,7 +131,7 @@ test('keeps text answers available when microphone permission is denied', async 
   await expect(page.getByRole('alert')).toContainText('Microphone access is unavailable');
   await page.getByLabel('Your answer').fill('I would check stale cached data and invalidate the related query.');
   await page.getByRole('button', { name: 'Submit answer' }).click();
-  await expect(page.getByText('Question 2 of 4', { exact: true })).toBeVisible();
+  await expect(page.getByText('Question 2', { exact: true })).toBeVisible();
 });
 
 type VoiceTestWindow = Window & {
@@ -163,11 +183,14 @@ for (const playbackBlocked of [false, true]) {
     }, { blocked: playbackBlocked, sample });
     await register(page);
     await page.getByRole('link', { name: 'New interview', exact: true }).click();
+    await page.getByRole('combobox', { name: 'Interview track', exact: true }).selectOption('behavioral');
+    await page.getByLabel('Upload interview resume').setInputFiles({ name: 'voice.pdf', mimeType: 'application/pdf', buffer: syntheticResume() });
+    await expect(page.getByRole('combobox', { name: 'Resume profile', exact: true })).not.toHaveValue('');
     await page.getByLabel('Role title', { exact: true }).fill('Software Engineer');
     await page.getByLabel('Job description', { exact: true }).fill('Work with the team to build accessible software in React and share technical decisions.');
-    await page.getByRole('button', { name: 'Analyze job description' }).click();
+    await page.getByRole('button', { name: 'Analyze interview' }).click();
     await expect(page.getByRole('heading', { name: 'Software Engineer', exact: true })).toBeVisible();
-    await page.getByRole('radio', { name: /Behavioral/ }).check();
+    await expect(page.getByRole('button', { name: 'Start interview' })).toBeEnabled();
     await page.getByRole('button', { name: 'Start interview' }).click();
     await page.getByRole('button', { name: 'Ask to join' }).click();
     const chat = page.getByRole('complementary', { name: 'In-call messages' });
@@ -202,7 +225,7 @@ for (const playbackBlocked of [false, true]) {
       await expect(chat.getByText(correctedAnswer, { exact: true })).toBeVisible();
       expect(transcriptions).toBe(2);
     }
-    await expect(page.getByText('Question 2 of 4', { exact: true })).toBeVisible();
+    await expect(page.getByText('Question 2', { exact: true })).toBeVisible();
     await page.getByRole('button', { name: 'End interview' }).click();
     await expect(page.getByRole('heading', { name: 'Interview summary' })).toBeVisible();
     await page.getByRole('link', { name: 'Exit', exact: true }).click();

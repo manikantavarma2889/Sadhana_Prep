@@ -11,7 +11,7 @@ npm ci
 npm run demo
 ```
 
-Open [Sadhana Prep](http://localhost:3002) to view the homepage and browse **Preparation**. Sign in with your email and password, or choose **Sign up** to create an account. The launcher loads the root `.env` and uses the configured database and AI provider. With `DATA_STORE=mongo` and `MONGO_URI`, accounts and interviews persist in MongoDB. With no configuration it uses a curated question bank, rule-based feedback, and process-local memory.
+Open [Sadhana Prep](http://localhost:3002) to view the homepage and browse **Preparation**. Sign in with your email and password, or choose **Sign up** to create an account. The launcher loads the root `.env` and uses the configured database and AI provider. With `DATA_STORE=mongo` and `MONGO_URI`, accounts and interviews persist in MongoDB. With no configuration it uses deterministic practice prompts, rule-based feedback, and process-local memory.
 
 Run `npm run build:preview` to build updates for the port 3002 preview. Refresh the page after frontend changes and restart the preview after backend changes.
 
@@ -49,13 +49,13 @@ For hosted final-transcript verification, set `AUDIO_TRANSCRIPTION_PROVIDER=gemi
 ## What you can do
 
 - Register, sign in, manage your profile and keep interview data scoped to your account.
-- Upload a text-based PDF resume, review the extracted skills, and compare them against a job description. Use the analysis to prioritize questions.
-- Practice frontend, backend, MERN, JavaScript/TypeScript, system design or behavioral interviews at three difficulty levels for 10, 20, 30 or 45 minutes.
-- Answer, skip, take a follow-up, finish early, or resume submitted work before the deadline. A refresh restores the active prompt and saved turns.
+- Upload a text-based PDF resume and analyze its actual projects, technologies and experience alongside the target role. A resume is required for every new session.
+- Choose Practice interview without a job description, or a role-based track including frontend, backend, Java, Python, DSA, databases, DevOps, cloud, mobile, QA and more. Sessions run for 10, 15, 20, 30 or 45 minutes at Easy, Intermediate or Hard level.
+- Analyze the complete setup before starting. Questions are generated one at a time until the time limit, with track questions prioritized and resume/behavioral categories capped. Changed settings or resume content require analysis again. Answers are saved before generating the next question, and generation can be retried.
 - Review seven coaching dimensions, answer excerpts, strengths, improvements, coverage, history and comparable results for the selected track and difficulty.
 - Hear the full introduction and each question before the microphone opens. Each spoken message appears in chat after playback finishes. Vosk runs English captions locally in the browser, and **Done answering** sends the finished transcript to chat. The first voice session downloads a roughly 41 MB model from the application. You can also type answers in chat.
 
-Sadhana Prep discards PDF files after extraction and saves the skill profile. Live English captions run in the browser. When hosted transcription is enabled, the app sends each completed answer recording to the selected Gemini or OpenAI speech provider for final verification. The configured coaching provider receives relevant job details, skill names and submitted interview answers. Feedback scores are intended for practice.
+Sadhana Prep discards PDF files after extraction and saves bounded extracted text with contact details removed, along with skills, for interview analysis. Existing profiles saved without text must be uploaded again. Live English captions run in the browser. When hosted transcription is enabled, the app sends each completed answer recording to the selected Gemini or OpenAI speech provider for final verification. The configured coaching provider receives relevant job details, resume project/experience context, skills and submitted interview answers. Feedback scores are intended for practice.
 
 ## Verify and deploy
 

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { BaseChatModel } from '@langchain/core/language_models/chat_models';
-import { dimensions, interviewQuestionCounts, type InterviewSettings, type Provider, type Turn } from '../../../../shared/contracts.ts';
+import { dimensions, difficultyLabels, trackLabels, interviewQuestionCounts, type InterviewContext, type QuestionCategory,
+  type Difficulty, type InterviewSettings, type Provider, type Question, type Track, type Turn } from '../../../../shared/contracts.ts';
 import type { Config } from '../../config.ts';
 import { AppError, unavailable } from '../../errors.ts';
 import { localRoleAnalysis } from '../resumes.ts';
@@ -13,9 +14,34 @@ const itemSchema = z.object({
 }).strict();
 const planSchema = z.object({ questions: z.array(itemSchema).min(3).max(6) }).strict();
 const textSkills = z.array(z.string().trim().min(1).max(60)).max(16);
-const roleSchema = z.object({ required: textSkills, preferred: textSkills, topics: textSkills }).strict();
+const roleSchema = z.object({ required: textSkills, preferred: textSkills, topics: textSkills,
+  resumeSummary: z.string().max(1000).default(''),
+  projects: z.array(z.object({ name: z.string().min(2).max(150), summary: z.string().max(700),
+    technologies: textSkills, evidence: z.string().min(8).max(1500) }).strict()).max(8).default([]),
+  experience: z.array(z.string().min(8).max(1000)).max(8).default([]),
+}).strict();
+const nextSchema = itemSchema.extend({ resumeEvidence: z.string().max(1500).nullable() }).strict();
 const followUpSchema = z.object({ question: itemSchema.nullable() }).strict();
 const dimensionKeys = dimensions.map(([key]) => key);
+const fundamentals: Partial<Record<Track, string[]>> = {
+  java: ['Java data types', 'classes and objects', 'constructors', 'interfaces', 'inheritance', 'exceptions', 'Java collections', 'generics', 'strings', 'encapsulation', 'maps and sets'],
+  python: ['Python lists', 'dictionaries', 'functions', 'iteration', 'exceptions', 'classes', 'comprehensions', 'modules', 'generators'],
+  frontend: ['HTML semantics', 'the CSS box model', 'passing React props from parent to child', 'useState for a simple counter',
+    'handling a button click', 'labels for HTML text inputs', 'the DOM tree', 'HTML input types', 'TypeScript primitive types', 'React functional components'],
+  backend: ['HTTP methods', 'API validation', 'status codes', 'database queries', 'authentication', 'pagination', 'transactions', 'logging'],
+  mern: ['React props', 'Express routes', 'MongoDB documents', 'Node.js callbacks', 'request validation', 'API errors', 'component state', 'indexes'],
+  javascript: ['variables', 'functions', 'arrays', 'objects', 'promises', 'closures', 'the event loop', 'TypeScript types'],
+  dsa: ['arrays', 'linked lists', 'stacks', 'queues', 'binary search', 'hash maps', 'trees', 'sorting'],
+  database: ['primary keys', 'foreign keys', 'SQL joins', 'normalization', 'indexes', 'transactions', 'grouping', 'constraints'],
+  devops: ['version control', 'CI pipelines', 'Docker containers', 'deployment checks', 'logs', 'health checks', 'configuration', 'rollbacks'],
+  cloud: ['virtual machines', 'object storage', 'load balancers', 'cloud networking', 'identity and access', 'scaling', 'monitoring', 'backups'],
+  mobile: ['mobile layouts', 'navigation', 'application state', 'offline storage', 'permissions', 'API requests', 'lifecycle', 'testing'],
+  'data-science': ['training data', 'test data', 'classification', 'regression', 'overfitting', 'evaluation metrics', 'data cleaning', 'features'],
+  qa: ['test cases', 'unit tests', 'integration tests', 'regression testing', 'test data', 'bug reports', 'automation', 'edge cases'],
+  'system-design': ['load balancing', 'caching', 'data storage', 'APIs', 'queues', 'replication', 'availability', 'observability'],
+  technical: ['data structures', 'HTTP', 'databases', 'object-oriented programming', 'testing', 'processes', 'memory', 'networks'],
+  behavioral: ['ownership', 'team communication', 'feedback', 'priorities', 'conflict resolution', 'learning', 'collaboration', 'reflection'],
+};
 export const draftSchema = z.object({
   grades: z.array(z.object({
     dimension: z.enum(dimensionKeys),
@@ -30,13 +56,41 @@ export const draftSchema = z.object({
 
 export type DraftFeedback = z.infer<typeof draftSchema>;
 export type DraftQuestion = z.infer<typeof itemSchema>;
+export type QuestionRequest = {
+  settings: InterviewSettings; context: InterviewContext; category: QuestionCategory; difficulty: Difficulty;
+  index: number; remainingSeconds: number; previous: Turn[]; covered: string[]; focusTopic: string;
+};
+
+function focusKey(topic: string) {
+  const value = normalizeQuestion(topic);
+  if (/accessib|aria|wcag|a11y|labels/.test(value)) return 'accessibility';
+  if (/typescript|typing|type safety/.test(value)) return 'typescript';
+  if (/render|performance|profil/.test(value)) return 'rendering';
+  if (/controlled|\bstate\b/.test(value)) return 'state';
+  if (/\bprops\b/.test(value)) return 'props';
+  if (/component/.test(value)) return 'components';
+  return value;
+}
+
+export function nextFocus(settings: InterviewSettings, context: InterviewContext, asked: Question[], category: QuestionCategory) {
+  const subset = asked.filter(question => question.category === category);
+  if (category === 'resume') return ['your personal contribution', 'technology choices', 'a project challenge', 'testing and results'][subset.length % 4]!;
+  if (category === 'behavioral') return ['collaboration', 'handling deadlines', 'receiving feedback', 'learning from mistakes'][subset.length % 4]!;
+  const subject = settings.practiceTrack ?? settings.track;
+  const used = new Set(subset.map(question => focusKey(question.topic)));
+  const basics = fundamentals[subject] ?? fundamentals.technical!;
+  const candidates = (settings.difficulty === 'foundation' ? basics : [...context.topics, ...basics])
+    .filter(topic => normalizeQuestion(topic) !== normalizeQuestion(trackLabels[subject]));
+  return candidates.find(topic => !used.has(focusKey(topic))) ?? candidates[subset.length % candidates.length] + ' in a different concrete example';
+}
 export type CoachingAI = {
   provider: Provider;
   model: string | null;
   plan(settings: InterviewSettings, topics: string[], title: string | null): Promise<DraftQuestion[]>;
   followUp(current: DraftQuestion, previous: Turn[], answer: string, covered: string[]): Promise<DraftQuestion | null>;
   evaluate(turn: Turn, criterion: string, settings: InterviewSettings): Promise<DraftFeedback>;
-  analyze(description: string, skills: string[]): Promise<z.infer<typeof roleSchema>>;
+  analyze(description: string, skills: string[], resumeText?: string, preparation?: InterviewSettings & { title: string }): Promise<z.infer<typeof roleSchema>>;
+  nextQuestion(input: QuestionRequest): Promise<DraftQuestion>;
 };
 
 function localFeedback(turn: Turn): DraftFeedback {
@@ -79,7 +133,41 @@ function localCoaching(): CoachingAI {
       };
     },
     async evaluate(turn) { return localFeedback(turn); },
-    async analyze(description) { return localRoleAnalysis(description); },
+    async analyze(description, _skills, resumeText = '') {
+      const evidence = resumeText.split(/\n|(?<=\.)\s/).find(line => /project/i.test(line));
+      const name = evidence?.match(/(?:project\s*:\s*)([^,.]+)/i)?.[1]?.trim();
+      return roleSchema.parse({ ...localRoleAnalysis(description), resumeSummary: resumeText.slice(0, 400),
+        projects: name && evidence ? [{ name, evidence, summary: evidence, technologies: [] }] : [], experience: [] });
+    },
+    async nextQuestion(input) {
+      const { context, category, difficulty, index } = input;
+      const subject = trackLabels[input.settings.practiceTrack ?? input.settings.track];
+      const focus = [...new Set([...context.topics, ...(fundamentals[input.settings.practiceTrack ?? input.settings.track] ?? fundamentals.technical!)])];
+      const topic = input.focusTopic || focus[index % focus.length] || subject;
+      if (category === 'resume') {
+        const project = context.projects[index % Math.max(context.projects.length, 1)];
+        const prompts = ['what did you build and which technologies did you use?', 'what was your own contribution and how did you verify it?',
+          'what challenge did you solve and what did you learn?', 'which design decision would you improve and why?'];
+        return { topic: project?.name ?? 'Resume experience', text: project
+          ? 'In your ' + project.name + ' project, ' + prompts[Math.floor(index / 5) % prompts.length]
+          : 'Using an experience from your resume, ' + prompts[Math.floor(index / 5) % prompts.length],
+        criterion: 'Explains real resume experience and the candidate contribution at ' + difficultyLabels[difficulty] + ' level.' };
+      }
+      if (category === 'behavioral') return { topic: 'Collaboration',
+        text: ['Tell me about a time you worked with someone who had a different opinion. What did you do?',
+          'Describe how you handled an unexpected deadline and communicated the result.',
+          'Tell me about feedback that changed the way you worked.',
+          'Describe a mistake you made and what you learned from it.'][Math.floor(index / 5) % 4]!,
+        criterion: 'Gives a specific situation, actions and a reflective outcome.' };
+      const tasks = difficulty === 'foundation'
+        ? ['Explain the purpose of', 'Give a simple example of', 'Describe a common use for', 'Explain how you would test']
+        : difficulty === 'intermediate'
+          ? ['Compare two approaches to', 'Walk through debugging', 'Explain a trade-off when using', 'Describe how you would improve']
+          : ['Design a resilient approach to', 'Analyze a failure under high load involving', 'Justify architectural trade-offs for', 'Explain how to measure and optimize'];
+      return { topic, text: tasks[Math.floor(index / focus.length) % tasks.length] + ' ' + topic +
+        ' in a ' + context.title + ' role. Use a concrete ' + subject + ' example.',
+      criterion: 'Demonstrates ' + difficultyLabels[difficulty] + ' understanding of ' + topic + ' relevant to the role.' };
+    },
   };
 }
 
@@ -137,10 +225,16 @@ export async function buildCoachingAI(config: Config): Promise<CoachingAI> {
       ], { signal });
       return schema.parse(result);
     } catch (error) {
-      const candidate = error as { status?: number; statusCode?: number; name?: string };
+      const candidate = error as { status?: number; statusCode?: number; name?: string; headers?: Headers | Record<string, string> };
       const status = candidate?.status ?? candidate?.statusCode;
       const category = status === 429 ? 'rate_limit' : candidate?.name === 'ZodError' ? 'invalid_output' : 'failed_or_timeout';
       console.warn(JSON.stringify({ event: 'provider_error', provider, operation: name, category }));
+      if (status === 429) {
+        const value = candidate.headers instanceof Headers ? candidate.headers.get('retry-after') : candidate.headers?.['retry-after'];
+        const seconds = Number(value);
+        throw new AppError(503, 'PROVIDER_RATE_LIMIT', 'The AI provider is busy. Your saved work is safe; try again shortly.',
+          Number.isFinite(seconds) && seconds > 0 ? Math.min(300, Math.max(1, seconds)) * 1000 : 60000);
+      }
       return unavailable();
     } finally {
       activeCalls--;
@@ -178,10 +272,48 @@ export async function buildCoachingAI(config: Config): Promise<CoachingAI> {
           question: turn.question.text, answer: turn.answer, criterion,
         });
     },
-    analyze(description, skills) {
+    analyze(description, skills, resumeText = '', preparation) {
       return ask('role_analysis', roleSchema,
-        'Extract explicit required and preferred technical skills from the supplied job description. Use exact skill names where possible. Suggest interview topics prioritized for this role and the candidate skill list.',
-        { description, candidateSkills: skills });
+        'Extract explicit required and preferred technical skills from the job description. Prioritize the selected track and role title, and suggest topics appropriate to the difficulty and duration. Analyze the supplied resume text: summarize experience and identify actual named projects, technologies used and candidate contributions. Each project name must appear literally in the resume; evidence must be a concise verbatim contiguous resume excerpt. Experience items must also be verbatim resume excerpts. Do not invent projects, employers, results or skills. If there is no evidence, return empty lists. Keep each project summary and evidence under 300 characters when possible.',
+        { description, candidateSkills: skills, resumeText, preparation });
+    },
+    async nextQuestion(input) {
+      const { context, settings, category, difficulty, remainingSeconds } = input;
+      const resumeNumber = input.previous.filter(turn => turn.question.category === 'resume').length;
+      const project = context.projects[resumeNumber % Math.max(context.projects.length, 1)];
+      const resumeContext = project ? { title: context.title, project, resumeText: project.evidence } : context;
+      const task = category === 'behavioral'
+        ? 'Ask one BEHAVIORAL question, beginning with Tell me about a time or Describe a time. Focus on collaboration, communication, ownership or feedback. Do not ask how to implement a technical feature.'
+        : category === 'resume'
+          ? 'Ask one RESUME question about an actual named project or explicit experience in this resume. Mention the project name when one is supplied. Return the exact resume evidence supporting the question.'
+          : 'Ask one TECHNICAL TRACK question about the selected subject and target role. Ask about concepts or applied skills; do not refer to a named resume project and do not ask for a personal behavioral story.';
+      const result = await ask('interview_' + category + '_question', nextSchema,
+        task + '\nThe specific focus for THIS question is: ' + input.focusTopic + '. Stay on this focus and do not retest a different earlier concept. ' +
+        'The required difficulty for THIS question is ' + difficultyLabels[difficulty] + '. ' +
+        (difficulty === 'foundation' && category === 'track' ? 'Ask a single basic definition or a simple everyday example. Avoid detailed standards, advanced optimization, architecture and multi-part scenarios. ' : '') +
+        (difficulty === 'foundation' && category === 'resume' ? 'Ask a straightforward description of what the candidate built or contributed. Avoid advanced architecture and deep trade-offs. ' : '') +
+        'Ask exactly ONE fresh interview question. This is a time-based interview, with no fixed question count. ' +
+        'Respect the server-assigned category and question difficulty. Easy means fundamental concepts and simple examples only. ' +
+        'Intermediate means applied reasoning and ordinary trade-offs. Hard means deeper technical reasoning and complex scenarios. ' +
+        'Keep the question focused on the selected track and role title, informed by the job description and resume. ' +
+        'For category track, ask a substantive question about this subject and role; do not drift into unrelated technologies. ' +
+        'For category resume, use an actual named project if supplied, mention that exact name in the question, and return a verbatim resumeEvidence excerpt. Otherwise ask about a technology or experience explicitly present in the resume with an exact excerpt. ' +
+        'For category behavioral, ask one role-relevant situation question. Set resumeEvidence to null for other categories. ' +
+        'Do not repeat any covered question or ask another self-introduction. Adapt depth to the latest answer, and keep the expected answer short enough for the remaining time. Never change the assigned difficulty because an answer was weak.',
+        { subject: trackLabels[settings.practiceTrack ?? settings.track], roleTitle: context.title, jobDescription: context.description,
+          category, focusTopic: input.focusTopic, questionDifficulty: difficultyLabels[difficulty], sessionDifficulty: difficultyLabels[settings.difficulty],
+          remainingSeconds, minutes: settings.minutes,
+          context: category === 'resume' ? resumeContext : { title: context.title, description: context.description, focusTopic: input.focusTopic },
+          covered: input.covered,
+          previous: input.previous.slice(-3).map(turn => ({ question: turn.question.text, answer: turn.answer?.slice(0, 1500) })) });
+      if (category === 'behavioral' && !/^(tell me about a time|describe a time)/i.test(result.text)) {
+        throw new AppError(503, 'WRONG_QUESTION_CATEGORY', 'The behavioral question did not match this part of the interview. Try again.');
+      }
+      if (category === 'resume' && (!result.resumeEvidence || !context.resumeText.includes(result.resumeEvidence) ||
+        (context.projects.length > 0 && !context.projects.some(project => result.text.toLowerCase().includes(project.name.toLowerCase()))))) {
+        throw new AppError(503, 'UNGROUNDED_QUESTION', 'The resume question could not be verified. Try again.');
+      }
+      return { text: result.text, topic: input.focusTopic, criterion: result.criterion };
     },
   };
 }

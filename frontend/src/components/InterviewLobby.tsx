@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState, type MouseEvent } from 'react';
-import { difficulties, durations, interviewQuestionCounts, trackLabels, tracks, type InterviewSettings } from '../../../shared/contracts.ts';
+import { difficultyLabels, trackLabels, type InterviewSettings } from '../../../shared/contracts.ts';
 import { createSpokenPrompt } from '../features/voice/browser-speech.ts';
 import { prepareCaptions } from '../features/voice/local-captions.ts';
 import { useInterviewCamera } from '../features/voice/interview-media.tsx';
@@ -12,9 +12,9 @@ import { ErrorNotice } from './ui.tsx';
 
 const clockFormat = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' });
 
-export function InterviewLobby({ join, back, pending, error, settings, update, roleTitle, readAloud, setReadAloud }: {
+export function InterviewLobby({ join, back, pending, error, settings, roleTitle, readAloud, setReadAloud }: {
   join: () => void; back: () => void; pending: boolean; error: unknown; settings: InterviewSettings;
-  update: (settings: InterviewSettings) => void; roleTitle?: string; readAloud: boolean; setReadAloud: (enabled: boolean) => void;
+  roleTitle?: string; readAloud: boolean; setReadAloud: (enabled: boolean) => void;
 }) {
   const { user } = useSession();
   const camera = useInterviewCamera();
@@ -134,22 +134,13 @@ export function InterviewLobby({ join, back, pending, error, settings, update, r
           <button className={'other-btn' + (showOptions ? ' open' : '')} type="button" aria-expanded={showOptions} aria-controls={optionsId}
             onClick={() => setShowOptions(value => !value)}>Other ways to join <MeetIcon name="expand_more" /></button>
           <div id={optionsId} className="options" hidden={!showOptions}>
-            <label>Interview type<select value={settings.track} disabled={pending}
-              onChange={event => update({ ...settings, track: event.target.value as InterviewSettings['track'] })}>
-              {tracks.map(track => <option key={track} value={track}>{trackLabels[track]}</option>)}
-            </select></label>
+            <label>Interview type<input value={trackLabels[settings.practiceTrack ?? settings.track]} readOnly /></label>
             <label>Target role<input type="text" value={roleTitle ?? 'General practice'} readOnly /></label>
             <div className="row">
-              <label>Level<select value={settings.difficulty} disabled={pending}
-                onChange={event => update({ ...settings, difficulty: event.target.value as InterviewSettings['difficulty'] })}>
-                {difficulties.map(level => <option key={level} value={level}>{level[0].toUpperCase() + level.slice(1)}</option>)}
-              </select></label>
-              <label>Duration<select value={settings.minutes} disabled={pending}
-                onChange={event => update({ ...settings, minutes: Number(event.target.value) as InterviewSettings['minutes'] })}>
-                {durations.map(minutes => <option key={minutes} value={minutes}>{minutes} minutes</option>)}
-              </select></label>
+              <label>Level<input value={difficultyLabels[settings.difficulty]} readOnly /></label>
+              <label>Duration<input value={settings.minutes + ' minutes'} readOnly /></label>
             </div>
-            <div>{interviewQuestionCounts[settings.minutes]} planned questions</div>
+            <div>Questions adapt to your role, answers and remaining time. Return to setup to change analyzed settings.</div>
             {user?.voiceEnabled && <label className="chk"><input type="checkbox" checked={readAloud} disabled={pending}
               onChange={event => setReadAloud(event.target.checked)} /> Let {interviewerName} speak questions aloud</label>}
             <button type="button" className="lobby-back" onClick={leave} disabled={pending}>Back to setup</button>
