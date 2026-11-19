@@ -76,5 +76,4 @@ For Docker Compose, configure `JWT_SECRET` in the root `.env` and run `docker co
 - [Deployment and operations](docs/DEPLOYMENT.md)
 - [Original source audit](REDEVELOPMENT_PLAN.md)
 
-The downloaded project did not include a repository-wide license. The original backend manifest identified ISC, and the scope of that declaration was unclear. See the source audit for provenance and dependency licensing. Preserve applicable upstream and third-party notices when redistributing material from those projects.
 
