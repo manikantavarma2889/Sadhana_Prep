@@ -23,7 +23,7 @@
   <img src="https://img.shields.io/badge/MongoDB-Atlas-47A248?style=for-the-badge&amp;logo=mongodb&amp;logoColor=white" alt="MongoDB Atlas">
   <br>
   <img src="https://img.shields.io/badge/LangChain-AI-1C3C3C?style=for-the-badge&amp;logo=langchain&amp;logoColor=white" alt="LangChain AI integration">
-  <img src="https://img.shields.io/badge/OpenRouter-LLM-6467F2?style=for-the-badge" alt="OpenRouter language models">
+  <img src="https://img.shields.io/badge/OpenAI-LLM-412991?style=for-the-badge&amp;logo=openai&amp;logoColor=white" alt="OpenAI language models">
   <img src="https://img.shields.io/badge/Vite-8-646CFF?style=for-the-badge&amp;logo=vite&amp;logoColor=white" alt="Vite 8">
   <img src="https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?style=for-the-badge&amp;logo=tailwindcss&amp;logoColor=white" alt="Tailwind CSS 4">
   <img src="https://img.shields.io/badge/Vercel-Deployment-000000?style=for-the-badge&amp;logo=vercel&amp;logoColor=white" alt="Deployed on Vercel">
@@ -63,7 +63,7 @@ AI feedback is coaching for practice. It is not a hiring decision or a guarantee
 | Navigation and data | React Router and TanStack Query |
 | Backend | Node.js 24, Express 5, Zod validation, JWT sessions, and scrypt password hashing |
 | Database | MongoDB / MongoDB Atlas with Mongoose; an in-memory adapter for local evaluation and tests |
-| AI interview and feedback | LangChain with OpenRouter, Google Gemini, OpenAI, or Ollama; a deterministic local adapter is also available |
+| AI interview and feedback | LangChain with OpenAI LLMs; Google Gemini, Ollama, and a deterministic local adapter are also supported |
 | Voice | Vosk browser captions, MediaRecorder, browser speech synthesis, and optional Gemini or OpenAI final transcription |
 | Resume processing | PDF.js in a bounded parser process; text-based PDF uploads up to 4 MB |
 | Testing | Vitest, Supertest, React Testing Library, and Playwright |
@@ -162,19 +162,18 @@ Keep `JWT_SECRET` stable, restart with `npm run demo`, and new accounts and inte
 
 ### 7. Optional: connect real AI and speech providers
 
-**OpenRouter interview questions and feedback:**
+**OpenAI LLM for interview questions and feedback:**
 
 ```dotenv
-AI_PROVIDER=openrouter
-AI_MODEL=your-tool-calling-model-id
-OPENROUTER_API_KEY=your-openrouter-api-key
-OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
+AI_PROVIDER=openai
+AI_MODEL=your-tool-calling-openai-model-id
+OPENAI_API_KEY=your-openai-api-key
 AI_TIMEOUT_MS=45000
 ```
 
 Replace both placeholders with your own valid values. Select a model that supports tool calling and structured responses. Available models and quotas depend on your provider account.
 
-Other supported interview providers are `gemini` with `GOOGLE_API_KEY`, `openai` with `OPENAI_API_KEY`, and `ollama` with `OLLAMA_URL`. Each requires its model ID in `AI_MODEL`. The cloud and Ollama adapters use LangChain.
+Other supported interview providers are `gemini` with `GOOGLE_API_KEY` and `ollama` with `OLLAMA_URL`. Each requires its model ID in `AI_MODEL`. The cloud and Ollama adapters use LangChain.
 
 **Optional hosted speech-to-text with Gemini:**
 

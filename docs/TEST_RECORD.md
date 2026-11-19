@@ -7,7 +7,7 @@
 - **Environment:** Windows, Node.js 24, npm workspaces, and Chrome through Playwright.
 - **Local application:** `http://localhost:3002`.
 - **Automated API/unit tests:** in-memory storage and deterministic local coaching unless a disposable `TEST_MONGO_URI` is explicitly provided.
-- **Live integration checks:** the deployed application, MongoDB Atlas, and the configured OpenRouter model; synthetic resume content and a temporary test account.
+- **Live integration checks:** the deployed application, MongoDB Atlas, and its configured language model; synthetic resume content and a temporary test account.
 
 This document records completed checks. It is not a security audit, full browser-compatibility report, or WCAG conformance claim.
 
