@@ -1,0 +1,22 @@
+.prisma-hero {
+  --ink: #eae6d5;
+  --accent: #e5ba82;
+  --inverse: #1b160e;
+  min-height: max(34rem, calc(100svh - 1.6rem));
+  border-radius: var(--frame-radius);
+  background-color: #1a1c15;
+  color: var(--ink);
+}
+
+.prisma-hero-title {
+  font-size: clamp(2.75rem, 12.8vw, 8rem);
+  font-weight: 500;
+  letter-spacing: -.075em;
+  line-height: .85;
+}
+
+@media (min-width: 64rem) {
+  .prisma-hero-title {
+    font-size: clamp(5rem, 10.6vw, 13rem);
+  }
+}

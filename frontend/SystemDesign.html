@@ -1,0 +1,2005 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Designed to Scale — Learn System Design Visually</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📐</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f3edda; --panel:#fbf7ea; --panel2:#fffdf4; --canvas:#f8f3e3;
+  --ink:#26251f; --muted:#8b8677; --faint:#b6b09d;
+  --line:#e4dcc4; --line2:#d5cdb2;
+  --green:#a5d877; --green-deep:#4c8b3f; --green-soft:#d9edc4; --green-hi:#c9e8a0;
+  --yellow:#f6ecc4; --yellow-line:#e3d59c; --yellow-ink:#8a6d1b;
+  --purple:#e6e1f8; --purple-line:#cbc2ec; --purple-ink:#5b48b8;
+  --blue:#dcebfa; --blue-line:#bcd7f0; --blue-ink:#2b6cb0;
+  --red:#f6d9d2; --red-line:#eab9ac; --red-ink:#b0432c;
+  --orange:#e07b39; --resp:#4f9d5d; --hs:#9a958a;
+  --shadow:0 2px 0 var(--ink);
+  --r:14px;
+  --mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:var(--mono); background:var(--bg); color:var(--ink);
+  font-size:13px; -webkit-font-smoothing:antialiased; overflow:hidden;
+}
+button{font-family:var(--mono);color:var(--ink);cursor:pointer;background:none;border:none}
+button:focus-visible,input:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--purple-ink);outline-offset:2px;border-radius:6px}
+::-webkit-scrollbar{width:9px;height:9px}
+::-webkit-scrollbar-thumb{background:var(--line2);border-radius:9px;border:2px solid var(--bg)}
+::-webkit-scrollbar-track{background:transparent}
+
+#app{display:grid;grid-template-columns:250px minmax(0,1fr) 316px;height:100dvh}
+
+/* ---------- topbar (mobile) ---------- */
+.topbar{display:none;position:sticky;top:0;z-index:40;align-items:center;gap:10px;
+  padding:10px 14px;background:var(--panel);border-bottom:1.5px solid var(--line2)}
+.topbar .tb-title{font-weight:800;font-size:14px;display:flex;align-items:center;gap:8px}
+.topbar .tb-count{margin-left:auto;font-size:11px;color:var(--muted)}
+.icon-btn{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;
+  border:1.5px solid var(--ink);border-radius:9px;background:var(--panel2);box-shadow:var(--shadow)}
+.icon-btn:active{transform:translateY(2px);box-shadow:none}
+.scrim{display:none;position:fixed;inset:0;background:rgba(38,37,31,.35);z-index:45;backdrop-filter:blur(2px)}
+.scrim.on{display:block}
+
+/* ---------- sidebar ---------- */
+.sidebar{background:var(--panel);border-right:1.5px solid var(--line2);display:flex;flex-direction:column;
+  height:100dvh;position:relative;z-index:50}
+.side-head{display:flex;align-items:center;gap:9px;padding:16px 16px 12px;font-weight:800;font-size:14px}
+.side-head .count{margin-left:auto;font-size:10.5px;font-weight:500;color:var(--muted)}
+.tree{flex:1;overflow-y:auto;padding:2px 10px 12px}
+.mod{margin-bottom:2px}
+.mod-head{display:flex;align-items:center;gap:7px;width:100%;padding:7px 6px;border-radius:9px;
+  font-size:12px;font-weight:700;text-align:left;transition:background .15s}
+.mod-head:hover{background:#f1ead6}
+.mod-head .chev{transition:transform .22s;color:var(--muted);flex:none}
+.mod.open .mod-head .chev{transform:rotate(90deg)}
+.mod-head .mcount{margin-left:auto;font-size:10px;font-weight:500;color:var(--muted)}
+.mod-head svg.folder{flex:none}
+.lessons{overflow:hidden;max-height:0;transition:max-height .3s ease}
+.mod.open .lessons{max-height:600px}
+.lesson-btn{display:flex;align-items:center;gap:8px;width:100%;text-align:left;
+  padding:6px 8px 6px 26px;margin:1px 0;border-radius:9px;font-size:11.5px;font-weight:500;
+  color:#57534a;border:1.5px solid transparent;position:relative;transition:background .15s}
+.lesson-btn::before{content:"";position:absolute;left:14px;top:0;bottom:0;width:1.5px;background:var(--line2)}
+.lesson-btn:hover{background:#f1ead6}
+.lesson-btn.active{background:var(--green-hi);border-color:var(--ink);color:var(--ink);font-weight:700;box-shadow:0 1.5px 0 var(--ink)}
+.lesson-btn .lic{flex:none;color:var(--faint)}
+.lesson-btn.done .lic{color:var(--green-deep)}
+.lesson-btn.active .lic{color:var(--green-deep)}
+.lesson-btn .lt{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.side-foot{border-top:1.5px solid var(--line2);padding:10px 12px;position:relative}
+.prog-btn{display:flex;align-items:center;gap:8px;width:100%;padding:9px 12px;border:1.5px solid var(--ink);
+  border-radius:10px;background:var(--panel2);box-shadow:var(--shadow);font-size:11px;font-weight:700;letter-spacing:.4px}
+.prog-btn:active{transform:translateY(2px);box-shadow:none}
+.prog-btn b{margin-left:auto;font-weight:800}
+.prog-btn .pc{color:var(--muted);transition:transform .2s}
+.prog-btn[aria-expanded="true"] .pc{transform:rotate(90deg)}
+.prog-pop{position:absolute;left:12px;right:12px;bottom:calc(100% + 8px);background:var(--panel2);
+  border:1.5px solid var(--ink);border-radius:12px;box-shadow:0 4px 0 var(--ink);padding:14px;z-index:60;
+  opacity:0;pointer-events:none;transform:translateY(6px);transition:.2s}
+.prog-pop.on{opacity:1;pointer-events:auto;transform:none}
+.prog-pop h4{font-size:11px;letter-spacing:.6px;margin-bottom:4px}
+.prog-pop .big{font-size:22px;font-weight:800;margin-bottom:10px}
+.prog-pop .big span{font-size:12px;color:var(--muted);font-weight:500}
+.pp-row{display:flex;align-items:center;gap:8px;font-size:10.5px;margin:6px 0}
+.pp-row .nm{width:118px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#57534a}
+.pp-bar{flex:1;height:7px;border:1px solid var(--line2);border-radius:6px;background:#f1ead6;overflow:hidden}
+.pp-bar i{display:block;height:100%;background:var(--green);border-radius:6px;transition:width .4s}
+.pp-row .ct{width:34px;text-align:right;color:var(--muted)}
+.pp-reset{margin-top:10px;width:100%;padding:7px;border:1.5px solid var(--red-line);color:var(--red-ink);
+  background:var(--red);border-radius:8px;font-size:10.5px;font-weight:700}
+.pp-reset:hover{filter:brightness(.97)}
+
+/* ---------- main ---------- */
+.main{overflow-y:auto;padding:16px 18px 20px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.crumb{font-size:11px;color:var(--muted);margin-bottom:8px}
+.crumb b{color:var(--ink);font-weight:600}
+.title-row{display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap}
+h1{font-size:26px;font-weight:800;letter-spacing:-.5px;line-height:1.15}
+.badges{display:flex;gap:8px;margin-left:auto;flex-wrap:wrap}
+.badge{display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:999px;
+  border:1.5px solid var(--ink);font-size:10.5px;font-weight:700;box-shadow:0 1.5px 0 var(--ink)}
+.badge.time{background:var(--yellow)} .badge.level{background:var(--green-soft)}
+.badge.level.int{background:var(--yellow)} .badge.level.adv{background:var(--red)}
+.badge.steps{background:var(--purple)}
+.sub{color:#6b675c;font-size:12px;margin-top:7px}
+
+.canvas-panel{background:var(--canvas);border:1.5px solid var(--line2);border-radius:var(--r);
+  display:flex;flex-direction:column;flex:1;min-height:480px;position:relative;overflow:hidden;
+  background-image:
+    repeating-linear-gradient(60deg,transparent 0 21px,rgba(190,178,140,.16) 21px 22px),
+    repeating-linear-gradient(-60deg,transparent 0 21px,rgba(190,178,140,.16) 21px 22px)}
+.canvas-top{display:flex;align-items:flex-start;gap:10px;padding:14px 14px 0;flex-wrap:wrap;z-index:3}
+.metrics{display:flex;gap:8px;flex-wrap:wrap}
+.metric{background:var(--panel2);border:1.5px solid var(--line2);border-radius:10px;padding:7px 12px 8px;min-width:96px;
+  box-shadow:0 1.5px 0 rgba(38,37,31,.12);transition:border-color .3s}
+.metric.hot{border-color:var(--ink)}
+.metric .ml{display:flex;align-items:center;gap:5px;font-size:8.5px;font-weight:700;letter-spacing:.7px;color:var(--muted)}
+.metric .mv{font-size:15px;font-weight:800;margin-top:3px;font-variant-numeric:tabular-nums}
+.metric .mv small{font-size:9.5px;font-weight:600;color:var(--muted);margin-left:2px}
+.canvas-actions{margin-left:auto;display:flex;gap:8px}
+.cbtn{display:inline-flex;align-items:center;gap:7px;padding:8px 14px;border:1.5px solid var(--ink);border-radius:10px;
+  background:var(--panel2);font-size:11.5px;font-weight:700;box-shadow:var(--shadow);transition:transform .08s,background .15s}
+.cbtn:hover{background:#fff}
+.cbtn:active{transform:translateY(2px);box-shadow:none}
+.cbtn[aria-pressed="true"]{background:var(--yellow)}
+.stage{flex:1;position:relative;min-height:340px}
+.stage svg{position:absolute;inset:0;width:100%;height:100%}
+.note{position:absolute;top:12px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fdfaf0;
+  font-size:11px;font-weight:600;padding:7px 14px;border-radius:999px;z-index:4;white-space:nowrap;
+  box-shadow:0 3px 0 rgba(38,37,31,.25);animation:noteIn .35s ease}
+@keyframes noteIn{from{opacity:0;transform:translate(-50%,-6px)}to{opacity:1;transform:translate(-50%,0)}}
+.legend{display:flex;gap:16px;padding:10px 16px 12px;font-size:10px;color:var(--muted);z-index:3}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.dot{width:9px;height:9px;border-radius:50%;border:1.5px solid var(--ink)}
+.dot.req{background:var(--orange)} .dot.res{background:var(--resp)} .dot.hs{background:#fffdf4}
+
+/* svg scene */
+.edge{fill:none;stroke:#cdc4a6;stroke-width:1.6;stroke-dasharray:5 6;opacity:0;transition:opacity .5s}
+.edge.on{opacity:.85}
+.node{opacity:0;transition:opacity .45s;pointer-events:none}
+.node.on{opacity:1}
+.node .float{animation:bob 4.5s ease-in-out infinite}
+.node:nth-child(odd) .float{animation-delay:-2.2s}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+.node .ring{fill:none;stroke:var(--green-deep);stroke-width:2;stroke-dasharray:4 5;opacity:0;transition:opacity .3s}
+.node.focus .ring{opacity:.9;animation:spin 7s linear infinite}
+.node.alert .ring{opacity:.95;stroke:var(--red-ink);animation:spin 2.2s linear infinite}
+@keyframes spin{to{stroke-dashoffset:-90}}
+.node.alert .art{animation:shake .5s ease infinite}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-2px)}75%{transform:translateX(2px)}}
+.node .bumpable{transform-origin:center;transform-box:fill-box}
+.node.bump .bumpable{animation:bump .45s ease}
+@keyframes bump{0%{transform:scale(1)}35%{transform:scale(1.09)}100%{transform:scale(1)}}
+.node text{font-family:var(--mono)}
+.pkt-label{font-size:9.5px;font-weight:700;fill:var(--ink);paint-order:stroke;stroke:#f8f3e3;stroke-width:3.5px}
+
+/* timeline */
+.timeline-panel{background:var(--panel);border:1.5px solid var(--line2);border-radius:var(--r);padding:13px 18px 15px}
+.tl-head{display:flex;justify-content:space-between;font-size:10px;font-weight:700;letter-spacing:.8px;color:var(--muted);margin-bottom:14px}
+.tl-head b{color:var(--ink)}
+.tl-wrap{overflow-x:auto;padding-bottom:4px}
+.tl{display:flex;justify-content:space-between;position:relative;min-width:660px}
+.tl::before{content:"";position:absolute;left:14px;right:14px;top:13px;height:2px;background:var(--line2)}
+.tl .tl-progress{position:absolute;left:14px;top:13px;height:2px;background:var(--green-deep);transition:width .4s;max-width:calc(100% - 28px)}
+.tstep{display:flex;flex-direction:column;align-items:center;gap:7px;position:relative;z-index:1;flex:1;min-width:56px}
+.tstep .tc{width:27px;height:27px;border-radius:50%;border:1.5px solid var(--line2);background:var(--panel2);
+  display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--muted);transition:.2s}
+.tstep .tlab{font-size:9.5px;color:var(--muted);text-align:center;font-weight:500;transition:.2s}
+.tstep:hover .tc{border-color:var(--ink);color:var(--ink)}
+.tstep.past .tc{border-color:var(--green-deep);color:var(--green-deep);background:var(--green-soft)}
+.tstep.past .tlab{color:#6b675c}
+.tstep.cur .tc{background:var(--green);border-color:var(--ink);color:var(--ink);box-shadow:0 1.5px 0 var(--ink);transform:scale(1.12)}
+.tstep.cur .tlab{color:var(--ink);font-weight:800}
+
+/* ---------- right ---------- */
+.right{overflow-y:auto;padding:16px 16px 20px 0;display:flex;flex-direction:column;gap:14px}
+.step-card,.learn-card{background:var(--panel);border:1.5px solid var(--line2);border-radius:var(--r);padding:16px}
+.step-card{display:flex;flex-direction:column;flex:1;min-height:420px}
+.step-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.step-top .sc{font-size:10px;font-weight:700;letter-spacing:.8px;color:var(--muted)}
+.kind{font-size:9.5px;font-weight:800;letter-spacing:.7px;padding:4px 10px;border-radius:999px;border:1.5px solid var(--ink);box-shadow:0 1.5px 0 var(--ink)}
+.kind.PROBLEM{background:var(--red);color:var(--red-ink)}
+.kind.CONCEPT{background:var(--blue);color:var(--blue-ink)}
+.kind.CASE{background:var(--yellow);color:var(--yellow-ink)}
+.kind.RECAP{background:var(--green-soft);color:var(--green-deep)}
+.step-card h2{font-size:17px;font-weight:800;line-height:1.3;margin-bottom:12px;letter-spacing:-.2px}
+.step-body{font-size:12px;line-height:1.7;color:#45423a}
+.step-body p{margin-bottom:11px}
+.step-body code{background:#efe8d3;border:1px solid var(--line2);border-radius:5px;padding:1px 5px;font-size:10.5px;font-weight:600;color:var(--ink)}
+.keyidea{display:flex;gap:10px;background:var(--purple);border:1.5px solid var(--purple-line);border-radius:11px;
+  padding:12px;margin-top:auto;margin-bottom:14px;animation:kiIn .4s ease}
+@keyframes kiIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+.ki-icon{flex:none;width:30px;height:30px;border:1.5px solid var(--ink);border-radius:8px;background:#fffdf4;
+  display:flex;align-items:center;justify-content:center;color:var(--purple-ink);box-shadow:0 1.5px 0 var(--ink)}
+.ki-label{font-size:8.5px;font-weight:800;letter-spacing:.9px;color:var(--purple-ink);margin-bottom:4px}
+.keyidea p{font-size:11px;line-height:1.6;color:#3f3a55}
+.step-nav{display:flex;gap:10px}
+.nav-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px 14px;border-radius:10px;
+  border:1.5px solid var(--ink);font-size:11.5px;font-weight:700;box-shadow:var(--shadow);transition:transform .08s,filter .15s}
+.nav-btn:active{transform:translateY(2px);box-shadow:none}
+.nav-btn.back{background:var(--panel2);color:#6b675c}
+.nav-btn.back:disabled{opacity:.45;cursor:not-allowed;box-shadow:none;border-color:var(--line2);color:var(--faint)}
+.nav-btn.next{flex:1;background:var(--green);justify-content:space-between}
+.nav-btn.next:hover{filter:brightness(1.04)}
+.nav-btn.next.finish{background:var(--yellow)}
+.kbd-hints{margin-top:12px;font-size:9.5px;color:var(--faint);display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+kbd{border:1px solid var(--line2);border-bottom-width:2px;border-radius:5px;background:var(--panel2);
+  padding:1px 5px;font-size:9px;font-family:var(--mono);color:var(--muted)}
+.learn-head{font-size:10px;font-weight:800;letter-spacing:.9px;color:var(--muted);margin-bottom:11px}
+.learn-card ul{list-style:none}
+.learn-item{display:flex;gap:9px;align-items:flex-start;padding:6px 4px;border-radius:8px;cursor:pointer;transition:background .15s}
+.learn-item:hover{background:#f1ead6}
+.learn-item input{position:absolute;opacity:0;pointer-events:none}
+.cb{flex:none;width:16px;height:16px;border:1.5px solid var(--line2);border-radius:5px;background:var(--panel2);
+  display:flex;align-items:center;justify-content:center;margin-top:1px;transition:.15s;color:transparent}
+.learn-item input:checked + .cb{background:var(--green);border-color:var(--ink);color:var(--ink)}
+.learn-item .lx{font-size:11px;line-height:1.55;color:#57534a;transition:.15s}
+.learn-item input:checked ~ .lx{color:var(--faint);text-decoration:line-through}
+
+/* toast + confetti */
+#toast{position:fixed;left:50%;bottom:26px;transform:translate(-50%,20px);background:var(--ink);color:#fdfaf0;
+  padding:11px 20px;border-radius:11px;font-size:12px;font-weight:700;z-index:100;opacity:0;pointer-events:none;
+  transition:.3s;box-shadow:0 4px 0 rgba(38,37,31,.3);display:flex;gap:9px;align-items:center}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+.confetti{position:absolute;width:8px;height:12px;top:40%;left:50%;z-index:5;pointer-events:none;border-radius:2px}
+
+.hidden{display:none!important}
+
+/* ---------- responsive ---------- */
+@media (max-width:1280px){
+  #app{grid-template-columns:236px minmax(0,1fr) 296px}
+  h1{font-size:22px}
+}
+@media (max-width:1120px){
+  body{overflow:auto}
+  #app{grid-template-columns:236px minmax(0,1fr);grid-template-rows:auto auto;height:auto;
+    grid-template-areas:"side main" "side right"}
+  .sidebar{grid-area:side;position:sticky;top:0;align-self:start}
+  .main{grid-area:main;overflow:visible}
+  .right{grid-area:right;overflow:visible;padding:0 18px 24px}
+  .step-card{min-height:0}
+  .canvas-panel{min-height:440px}
+}
+@media (max-width:860px){
+  #app{grid-template-columns:1fr;grid-template-areas:"main" "right"}
+  .topbar{display:flex}
+  .sidebar{position:fixed;left:0;top:0;bottom:0;width:280px;transform:translateX(-105%);transition:transform .28s ease;
+    box-shadow:6px 0 24px rgba(38,37,31,.18);height:100dvh}
+  .sidebar.open{transform:none}
+  .main{padding:14px 12px 8px}
+  .right{padding:6px 12px 22px}
+  h1{font-size:20px}
+  .badges{margin-left:0}
+  .canvas-panel{min-height:400px}
+  .stage{min-height:280px}
+  .metric{min-width:80px;padding:6px 9px}
+  .metric .mv{font-size:13px}
+  .canvas-actions{margin-left:0;width:100%;justify-content:flex-end}
+  .note{font-size:10px;max-width:92%;white-space:normal;text-align:center}
+}
+@media (prefers-reduced-motion:reduce){
+  *{animation-duration:.01ms!important;transition-duration:.01ms!important}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <button class="icon-btn" id="menuBtn" aria-label="Open course menu"></button>
+  <span class="tb-title" id="tbTitle">Course</span>
+  <span class="tb-count" id="tbCount">0 / 40</span>
+</div>
+<div class="scrim" id="scrim"></div>
+
+<div id="app">
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="side-head"><span id="courseIcon"></span> Course <span class="count">40 lessons</span></div>
+    <nav class="tree" id="tree" aria-label="Course modules"></nav>
+    <div class="side-foot">
+      <div class="prog-pop" id="progPop" role="dialog" aria-label="Course progress"></div>
+      <button class="prog-btn" id="progBtn" aria-expanded="false">
+        PROGRESS <b id="progCount">0 / 40</b> <span class="pc" id="progChev"></span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- ============ MAIN ============ -->
+  <main class="main">
+    <header>
+      <div class="crumb" id="crumb"></div>
+      <div class="title-row">
+        <h1 id="lessonTitle"></h1>
+        <div class="badges" id="badges"></div>
+      </div>
+      <p class="sub" id="lessonSub"></p>
+    </header>
+
+    <section class="canvas-panel" aria-label="Lesson visualization">
+      <div class="canvas-top">
+        <div class="metrics" id="metrics"></div>
+        <div class="canvas-actions">
+          <button class="cbtn" id="replayBtn"></button>
+          <button class="cbtn" id="pauseBtn" aria-pressed="false"></button>
+        </div>
+      </div>
+      <div class="stage" id="stage">
+        <svg id="scene" viewBox="0 0 1000 560" preserveAspectRatio="xMidYMid meet" aria-hidden="true"></svg>
+        <div class="note hidden" id="note"></div>
+      </div>
+      <div class="legend">
+        <span><i class="dot req"></i> request</span>
+        <span><i class="dot res"></i> response</span>
+        <span><i class="dot hs"></i> handshake</span>
+      </div>
+    </section>
+
+    <section class="timeline-panel" aria-label="Lesson steps">
+      <div class="tl-head"><span>IN THIS LESSON</span><b id="tlCount"></b></div>
+      <div class="tl-wrap"><div class="tl" id="tl"></div></div>
+    </section>
+  </main>
+
+  <!-- ============ RIGHT ============ -->
+  <aside class="right">
+    <section class="step-card">
+      <div class="step-top"><span class="sc" id="stepCount"></span><span class="kind" id="kind"></span></div>
+      <h2 id="stepTitle"></h2>
+      <div class="step-body" id="stepBody"></div>
+      <div class="keyidea" id="keyidea">
+        <div class="ki-icon" id="kiIcon"></div>
+        <div><div class="ki-label">KEY IDEA</div><p id="kiText"></p></div>
+      </div>
+      <div class="step-nav">
+        <button class="nav-btn back" id="backBtn"></button>
+        <button class="nav-btn next" id="nextBtn"></button>
+      </div>
+      <div class="kbd-hints"><kbd>←</kbd><kbd>→</kbd> step · <kbd>R</kbd> replay · <kbd>Space</kbd> pause</div>
+    </section>
+    <section class="learn-card">
+      <div class="learn-head">YOU'LL LEARN</div>
+      <ul id="learn"></ul>
+    </section>
+  </aside>
+</div>
+
+<div id="toast" role="status"></div>
+
+<script>
+/* ================================================================
+   ICONS
+================================================================ */
+const IC = {
+  folder:'<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
+  chev:'<path d="M9 6l6 6-6 6"/>',
+  doc:'<path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4"/>',
+  check:'<path d="M5 12.5l5 5 9-10.5"/>',
+  checkc:'<circle cx="12" cy="12" r="9"/><path d="M8 12.2l3 3 5.2-6"/>',
+  clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 2"/>',
+  bars:'<path d="M5 19v-4M10 19v-8M15 19V5M20 19v-6"/>',
+  list:'<path d="M8 6h12M8 12h12M8 18h12"/><path d="M4 6h.01M4 12h.01M4 18h.01"/>',
+  globe:'<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3.2 3 3.2 15 0 18M12 3c-3.2 3-3.2 15 0 18"/>',
+  swap:'<path d="M7 8h10l-3-3M17 16H7l3 3"/>',
+  server:'<rect x="4" y="4" width="16" height="7" rx="2"/><rect x="4" y="13" width="16" height="7" rx="2"/><path d="M8 7.5h.01M8 16.5h.01"/>',
+  download:'<path d="M12 4v10m0 0l-4-4m4 4l4-4M5 19h14"/>',
+  user:'<circle cx="12" cy="8" r="4"/><path d="M4.5 20c1.4-3.8 4.6-5.5 7.5-5.5s6.1 1.7 7.5 5.5"/>',
+  replay:'<path d="M4.5 10a8 8 0 1 1 1.8 6.5"/><path d="M4.5 4v6h6"/>',
+  pause:'<path d="M9 5v14M15 5v14"/>',
+  play:'<path d="M8 5l11 7-11 7z"/>',
+  left:'<path d="M15 6l-6 6 6 6"/>',
+  right:'<path d="M9 6l6 6-6 6"/>',
+  spark:'<path d="M12 3l2.1 6L20 11l-5.9 2L12 19l-2.1-6L4 11l5.9-2z"/>',
+  menu:'<path d="M4 7h16M4 12h16M4 17h16"/>',
+  x:'<path d="M6 6l12 12M18 6L6 18"/>',
+  bolt:'<path d="M13 2L5 13h6l-1 9 8-11h-6z"/>',
+  gear:'<circle cx="12" cy="12" r="3.4"/><path d="M12 4v3M12 17v3M4 12h3M17 12h3M6.3 6.3l2.1 2.1M15.6 15.6l2.1 2.1M17.7 6.3l-2.1 2.1M8.4 15.6l-2.1 2.1"/>',
+  branch:'<circle cx="6" cy="6" r="2.4"/><circle cx="6" cy="18" r="2.4"/><circle cx="18" cy="8" r="2.4"/><path d="M6 8.4v7.2M18 10.4c0 4.5-6.5 3-9.3 5.4"/>',
+  up:'<path d="M12 19V6m0 0l-5 5m5-5l5 5"/>',
+  chart:'<path d="M4 20h16M7 16v-5M12 16V7M17 16v-3"/>',
+  image:'<rect x="4" y="5" width="16" height="14" rx="2"/><circle cx="9" cy="10" r="1.5"/><path d="M4 17l5-4 4 3 3-2 4 3"/>',
+  lock:'<rect x="6" y="11" width="12" height="9" rx="2"/><path d="M9 11V8a3 3 0 0 1 6 0v3"/>',
+  funnel:'<path d="M4 5h16l-6 7v6l-4 2v-8z"/>',
+  door:'<rect x="6" y="4" width="12" height="16" rx="1"/><path d="M14.5 12h.01"/>',
+  shield:'<path d="M12 3l7 3v6c0 4.2-3 7.2-7 9-4-1.8-7-4.8-7-9V6z"/><path d="M9 12l2.2 2.2L15.5 10"/>',
+  target:'<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/>',
+  db:'<ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/>',
+  queue:'<rect x="3" y="8" width="18" height="8" rx="2"/><path d="M8 8v8M13 8v8M17 8v8"/>'
+};
+const icon=(n,s=14,extra='')=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" ${extra}>${IC[n]||''}</svg>`;
+const folderIcon=(c,s=15)=>`<svg class="folder" width="${s}" height="${s}" viewBox="0 0 24 24" fill="${c}" stroke="#26251f" stroke-width="1.7" stroke-linejoin="round">${IC.folder}</svg>`;
+
+/* ================================================================
+   NODE ART (isometric SVG)
+================================================================ */
+const INK='#26251f';
+const glyph=(n,x,y,s=15,c=INK)=>`<g transform="translate(${x-s/2},${y-s/2})"><svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${IC[n]}</svg></g>`;
+
+function cube(accent,g,scale=1){
+  return `<g transform="scale(${scale})">
+    <path d="M-32,-46 L0,-30 L0,8 L-32,-8 Z" fill="#ece4cf" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M32,-46 L0,-30 L0,8 L32,-8 Z" fill="#f7f1de" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M0,-62 L32,-46 L0,-30 L-32,-46 Z" fill="#fffef9" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M-32,-36 L0,-20 L0,-12 L-32,-28 Z" fill="${accent}" opacity=".9"/>
+    ${g?glyph(g,16,-19,15):''}
+  </g>`;
+}
+function serverArt(){
+  return `<g>
+    <path d="M-30,-48 L0,-33 L0,10 L-30,-5 Z" fill="#ece4cf" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M30,-48 L0,-33 L0,10 L30,-5 Z" fill="#f7f1de" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M0,-63 L30,-48 L0,-33 L-30,-48 Z" fill="#fffef9" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M6,-26 L25,-35.5 M6,-14 L25,-23.5 M6,-2 L25,-11.5" stroke="${INK}" stroke-width="1.6" stroke-linecap="round"/>
+    <circle cx="-22" cy="-14" r="2.4" fill="#6fbf73" stroke="${INK}" stroke-width="1.2"/>
+    <circle cx="-22" cy="-2" r="2.4" fill="#f2c94c" stroke="${INK}" stroke-width="1.2"/>
+  </g>`;
+}
+function dbArt(accent='#bcd7f0'){
+  return `<g>
+    <path d="M-30,-54 L-30,-6 A30,11 0 0 0 30,-6 L30,-54" fill="#f1ead7" stroke="${INK}" stroke-width="2"/>
+    <path d="M-30,-37 A30,11 0 0 0 30,-37 M-30,-21 A30,11 0 0 0 30,-21" fill="none" stroke="${INK}" stroke-width="1.5" opacity=".55"/>
+    <ellipse cx="0" cy="-54" rx="30" ry="11" fill="${accent}" stroke="${INK}" stroke-width="2"/>
+  </g>`;
+}
+function queueArt(accent='#f6d9b8'){
+  let cells='';for(let i=0;i<4;i++)cells+=`<rect x="${-48+i*25}" y="-34" width="19" height="18" rx="4" fill="${i<3?accent:'#fffdf6'}" stroke="${INK}" stroke-width="1.4"/>`;
+  return `<g><rect x="-56" y="-41" width="112" height="32" rx="9" fill="#fffdf6" stroke="${INK}" stroke-width="2"/>${cells}
+    <path d="M58,-25 h10 m0,0 l-4,-4 m4,4 l-4,4" stroke="${INK}" stroke-width="1.8" fill="none" stroke-linecap="round"/></g>`;
+}
+function shieldArt(){
+  return `<g><path d="M0,-64 C14,-58 26,-54 30,-53 L30,-26 C30,-6 14,4 0,10 C-14,4 -30,-6 -30,-26 L-30,-53 C-26,-54 -14,-58 0,-64 Z"
+    fill="#e6e1f8" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/>${glyph('check',0,-28,20,'#5b48b8')}</g>`;
+}
+function lockArt(){
+  return `<g><path d="M-12,-42 v-8 a12,12 0 0 1 24,0 v8" fill="none" stroke="${INK}" stroke-width="2.4"/>
+    <rect x="-19" y="-42" width="38" height="32" rx="7" fill="#f6d9d2" stroke="${INK}" stroke-width="2"/>
+    <circle cx="0" cy="-28" r="4" fill="${INK}"/><path d="M0,-26 v7" stroke="${INK}" stroke-width="3" stroke-linecap="round"/></g>`;
+}
+function dashArt(){
+  return `<g><rect x="-34" y="-64" width="68" height="46" rx="7" fill="#fffdf6" stroke="${INK}" stroke-width="2"/>
+    <path d="M-24,-28 v-9 M-13,-28 v-16 M-2,-28 v-6 M9,-28 v-13 M20,-28 v-19" stroke="#4f9d5d" stroke-width="4" stroke-linecap="round"/>
+    <path d="M0,-18 v8 M-12,-10 h24" stroke="${INK}" stroke-width="2" stroke-linecap="round"/></g>`;
+}
+function docArt(accent='#f2c94c'){
+  return `<g><path d="M-22,-64 h30 l14,14 v46 h-44 z" fill="#fffdf6" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M8,-64 v14 h14" fill="${accent}" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M-13,-38 h26 M-13,-28 h26 M-13,-18 h17" stroke="#b6b09d" stroke-width="2.4" stroke-linecap="round"/></g>`;
+}
+function blobArt(){
+  return `<g><rect x="-31" y="-56" width="62" height="48" rx="9" fill="#fffdf6" stroke="${INK}" stroke-width="2"/>
+    <circle cx="-13" cy="-42" r="5" fill="#f2c94c" stroke="${INK}" stroke-width="1.5"/>
+    <path d="M-26,-16 l14,-14 10,9 8,-6 14,11" fill="none" stroke="#159f8c" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></g>`;
+}
+function regionArt(){
+  return `<g><circle cx="0" cy="-30" r="33" fill="none" stroke="#5b48b8" stroke-width="1.8" stroke-dasharray="4 5"/>
+    ${glyph('globe',0,-30,34,'#3b5bd6')}</g>`;
+}
+function monolithArt(){
+  return `<g transform="scale(1.55)">${cube('#b6b09d',null)}
+    <path d="M6,-26 L26,-36 M6,-14 L26,-24 M6,-2 L26,-12 M16,-31 L16,3" stroke="${INK}" stroke-width="1.3" opacity=".6"/></g>`;
+}
+function laptopArt(){
+  let plat='';
+  for(let i=12;i>=1;i--) plat+=`<g transform="translate(0,${50+i})"><rect x="-80" y="-80" width="160" height="160" rx="28" transform="scale(1,0.5) rotate(45)" fill="#d8cdb0" stroke="${INK}" stroke-width="${i===12?2:0}"/></g>`;
+  plat+=`<g transform="translate(0,50)"><rect x="-80" y="-80" width="160" height="160" rx="28" transform="scale(1,0.5) rotate(45)" fill="#f3ecd9" stroke="${INK}" stroke-width="2"/></g>`;
+  let keys='';
+  for(let r=0;r<3;r++)for(let c=0;c<10;c++)keys+=`<rect x="${7+c*8.6}" y="${4.5+r*5.4}" width="7" height="4.2" rx="1.2" fill="#fffdf6" stroke="#b9ae93" stroke-width=".8"/>`;
+  return `<g transform="scale(1.12)">
+    <ellipse cx="0" cy="66" rx="112" ry="24" fill="rgba(38,37,31,.08)"/>
+    ${plat}
+    <path d="M-41,15 L39,-11 L69,7 L-11,33 Z" fill="#cfc4a8" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M-41,8 L39,-18 L69,0 L-11,26 Z" fill="#efe8d4" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/>
+    <g transform="matrix(0.8 -0.26 1.1538 0.6923 -41 8)">${keys}<rect x="36" y="19.5" width="26" height="5.5" rx="2" fill="#fffdf6" stroke="#b9ae93" stroke-width=".9"/></g>
+    <path d="M-41,8 L39,-18 L27,-90 L-53,-64 Z" fill="#26251f" stroke="${INK}" stroke-width="2" stroke-linejoin="round" transform="translate(4,-2)"/>
+    <path d="M-41,8 L39,-18 L27,-90 L-53,-64 Z" fill="#3b3a36" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/>
+    <g transform="matrix(0.8 -0.26 0.1667 1 -53 -64)">
+      <rect x="6" y="6" width="88" height="60" rx="3" fill="#fdfcf7"/>
+      <rect x="11" y="11" width="78" height="22" rx="2" fill="url(#screenGrad)"/>
+      <rect x="11" y="38" width="52" height="4" rx="2" fill="#d8d2c0"/>
+      <rect x="11" y="46" width="66" height="4" rx="2" fill="#e4dfcf"/>
+      <rect x="11" y="54" width="40" height="4" rx="2" fill="#e4dfcf"/>
+    </g>
+  </g>`;
+}
+function pillArt(label,icn){
+  const w=Math.round(20+(icn?19:0)+label.length*6.5);
+  return `<g><rect x="${-w/2}" y="-13" width="${w}" height="26" rx="13" fill="#fffdf6" stroke="${INK}" stroke-width="1.7"/>
+    ${icn?glyph(icn,-w/2+15,0,13):''}
+    <text x="${-w/2+(icn?27:10)}" y="1" dominant-baseline="middle" font-size="10.5" font-weight="700" fill="${INK}">${label}</text></g>`;
+}
+const ART={
+  laptop:()=>laptopArt(),
+  server:()=>serverArt(),
+  db:(a)=>dbArt(a||'#bcd7f0'),
+  cache:()=>cube('#f2c94c','bolt'),
+  lb:()=>cube('#7fb3e8','swap'),
+  queue:()=>queueArt(),
+  topic:()=>queueArt('#d9cff5'),
+  cdn:()=>cube('#7fd6c8','globe'),
+  dns:()=>cube('#d8b98a','globe'),
+  shield:()=>shieldArt(),
+  lock:()=>lockArt(),
+  gateway:()=>cube('#a99ce8','door'),
+  worker:()=>cube('#a5d877','gear',.88),
+  git:()=>cube('#f0a35e','branch'),
+  ci:()=>cube('#a5d877','check'),
+  deploy:()=>cube('#7fb3e8','up'),
+  dash:()=>dashArt(),
+  doc:()=>docArt(),
+  blob:()=>blobArt(),
+  region:()=>regionArt(),
+  ws:()=>cube('#7fd6c8','swap'),
+  limiter:()=>cube('#eb9a86','funnel'),
+  monolith:()=>monolithArt(),
+  service:()=>cube('#c9c2ae','gear',.92)
+};
+function labelPill(label){
+  const w=Math.round(16+label.length*6.3);
+  return `<g transform="translate(0,32)"><rect x="${-w/2}" y="-10" width="${w}" height="20" rx="10" fill="#fffdf6" stroke="${INK}" stroke-width="1.5"/>
+    <text x="0" y="1" text-anchor="middle" dominant-baseline="middle" font-size="9.8" font-weight="600" fill="${INK}">${label}</text></g>`;
+}
+
+/* ================================================================
+   SCENES
+================================================================ */
+const n=(id,type,x,y,label,icn)=>({id,type,x,y,label,icn});
+const SCENES={
+  web:{nodes:[n('url','pill',500,102,'https://shop.example','globe'),n('laptop','laptop',500,290),n('you','pill',500,462,'you','user'),
+    n('dns','dns',178,168,'DNS resolver'),n('server','server',822,170,'web server'),n('db','db',872,392,'database'),
+    n('cdn','cdn',168,392,'CDN edge'),n('far','pill',112,486,'user · Sydney','user')],
+    edges:[['you','laptop'],['laptop','dns'],['laptop','server'],['server','db'],['laptop','cdn'],['far','server']]},
+  latency:{nodes:[n('you','pill',130,300,'you','user'),n('near','server',470,160,'near · 10 ms'),n('far','server',845,300,'far · 150 ms'),n('pipe','queue',470,430,'bandwidth · 10 MB/s')],
+    edges:[['you','near'],['you','far'],['you','pipe'],['pipe','near']]},
+  math:{nodes:[n('app','laptop',280,310),n('server','server',700,170,'app server'),n('db','db',770,410,'database'),n('cache','cache',520,440,'cache')],
+    edges:[['app','server'],['server','db'],['server','cache']]},
+  scale:{nodes:[n('users','pill',115,300,'10k users','user'),n('lb','lb',392,300,'load balancer'),n('s1','server',672,150,'app 1'),n('s2','server',700,300,'app 2'),n('s3','server',672,452,'app 3'),n('db','db',905,300,'shared DB')],
+    edges:[['users','lb'],['lb','s1'],['lb','s2'],['lb','s3'],['s1','db'],['s2','db'],['s3','db']]},
+  stateless:{nodes:[n('users','pill',115,300,'users','user'),n('lb','lb',372,300,'load balancer'),n('s1','server',640,175,'app 1'),n('s2','server',640,425,'app 2'),n('sess','cache',888,300,'session store')],
+    edges:[['users','lb'],['lb','s1'],['lb','s2'],['s1','sess'],['s2','sess']]},
+  autoscale:{nodes:[n('users','pill',108,300,'traffic','user'),n('lb','lb',345,300,'load balancer'),n('s1','server',615,155,'app 1'),n('s2','server',615,300,'app 2'),n('s3','server',615,448,'app 3'),n('mon','dash',880,300,'autoscaler')],
+    edges:[['users','lb'],['lb','s1'],['lb','s2'],['lb','s3'],['lb','mon']]},
+  sql:{nodes:[n('app','service',235,300,'app'),n('pg','db',660,190,'SQL · tables','#bcd7f0'),n('doc','blob',660,430,'NoSQL · documents')],
+    edges:[['app','pg'],['app','doc']]},
+  index:{nodes:[n('app','service',205,300,'app'),n('db','db',700,330,'products table'),n('idx','doc',700,130,'index · B-tree')],
+    edges:[['app','db'],['db','idx']]},
+  acid:{nodes:[n('app','service',225,300,'app'),n('db','db',700,330,'database'),n('wal','doc',700,130,'write-ahead log')],
+    edges:[['app','db'],['db','wal']]},
+  replica:{nodes:[n('app','service',175,300,'app'),n('pri','db',510,300,'primary','#f6d9b8'),n('r1','db',822,168,'replica 1'),n('r2','db',822,432,'replica 2')],
+    edges:[['app','pri'],['pri','r1'],['pri','r2'],['app','r1']]},
+  shard:{nodes:[n('app','service',155,300,'app'),n('rt','lb',415,300,'shard router'),n('a','db',722,140,'shard A · a–h'),n('b','db',762,300,'shard B · i–p'),n('c','db',722,462,'shard C · q–z')],
+    edges:[['app','rt'],['rt','a'],['rt','b'],['rt','c']]},
+  cache:{nodes:[n('app','service',215,300,'app'),n('cache','cache',515,300,'cache · Redis'),n('db','db',822,300,'database')],
+    edges:[['app','cache'],['cache','db']]},
+  invalid:{nodes:[n('app','service',195,300,'reader'),n('cache','cache',515,175,'cache'),n('db','db',515,430,'database'),n('wr','service',845,300,'writer')],
+    edges:[['app','cache'],['app','db'],['wr','db'],['wr','cache']]},
+  cdn:{nodes:[n('user','pill',135,300,'user · Lisbon','user'),n('edge','cdn',480,300,'edge · Lisbon'),n('origin','server',845,300,'origin · Virginia')],
+    edges:[['user','edge'],['edge','origin']]},
+  blob:{nodes:[n('app','service',225,300,'app'),n('store','blob',700,200,'object store'),n('cdn','cdn',700,430,'CDN')],
+    edges:[['app','store'],['store','cdn']]},
+  consist:{nodes:[n('cl','pill',145,300,'client','user'),n('a','db',530,175,'node A'),n('b','db',530,430,'node B')],
+    edges:[['cl','a'],['cl','b'],['a','b']]},
+  cap:{nodes:[n('cl','pill',135,300,'client','user'),n('eu','region',510,170,'region EU'),n('us','region',510,440,'region US')],
+    edges:[['cl','eu'],['cl','us'],['eu','us']]},
+  rest:{nodes:[n('cl','service',205,300,'client'),n('rest','gateway',660,180,'REST /orders'),n('rpc','gateway',660,430,'RPC Orders.Get')],
+    edges:[['cl','rest'],['cl','rpc']]},
+  queue:{nodes:[n('prod','service',155,300,'web app'),n('q','queue',478,300,'queue'),n('w1','worker',788,160,'worker 1'),n('w2','worker',812,300,'worker 2'),n('w3','worker',788,442,'worker 3')],
+    edges:[['prod','q'],['q','w1'],['q','w2'],['q','w3']]},
+  pubsub:{nodes:[n('pub','service',155,300,'orders svc'),n('topic','topic',478,300,'topic: order.paid'),n('s1','service',795,155,'email'),n('s2','service',818,300,'analytics'),n('s3','service',795,448,'shipping')],
+    edges:[['pub','topic'],['topic','s1'],['topic','s2'],['topic','s3']]},
+  realtime:{nodes:[n('a','pill',150,300,'Ana','user'),n('ws','ws',500,300,'WebSocket svc'),n('b','pill',852,300,'Ben','user'),n('store','db',500,478,'history')],
+    edges:[['a','ws'],['ws','b'],['ws','store']]},
+  retry:{nodes:[n('cl','service',225,300,'client'),n('svc','server',735,300,'flaky service')],
+    edges:[['cl','svc']]},
+  breaker:{nodes:[n('cl','service',165,300,'client'),n('br','shield',478,300,'circuit breaker'),n('svc','server',800,300,'service')],
+    edges:[['cl','br'],['br','svc']]},
+  failover:{nodes:[n('users','pill',125,300,'users','user'),n('lb','lb',400,300,'health checks'),n('a','server',705,175,'healthy'),n('b','server',705,430,'sick')],
+    edges:[['users','lb'],['lb','a'],['lb','b']]},
+  pressure:{nodes:[n('prod','pill',135,300,'1k rps','user'),n('lim','limiter',455,300,'rate limiter'),n('api','server',795,300,'api · 300 rps')],
+    edges:[['prod','lim'],['lim','api']]},
+  monolith:{nodes:[n('cl','pill',135,300,'client','user'),n('mono','monolith',462,300,'monolith'),n('o','service',775,155,'orders'),n('u','service',812,300,'users'),n('b','service',775,448,'billing')],
+    edges:[['cl','mono'],['mono','o'],['mono','u'],['mono','b']]},
+  gateway:{nodes:[n('cl','pill',145,300,'client','user'),n('gw','gateway',452,300,'API gateway'),n('a','service',775,150,'orders'),n('b','service',812,300,'users'),n('c','service',775,452,'search')],
+    edges:[['cl','gw'],['gw','a'],['gw','b'],['gw','c']]},
+  events:{nodes:[n('ord','service',155,300,'orders'),n('bus','topic',478,300,'event bus'),n('inv','service',795,155,'inventory'),n('pay','service',818,300,'payments'),n('shp','service',795,448,'shipping')],
+    edges:[['ord','bus'],['bus','inv'],['bus','pay'],['bus','shp']]},
+  idem:{nodes:[n('cl','service',185,300,'client'),n('api','gateway',555,300,'payments API'),n('db','db',862,300,'dedupe keys')],
+    edges:[['cl','api'],['api','db']]},
+  tls:{nodes:[n('cl','service',205,300,'browser'),n('ca','shield',480,140,'certificate'),n('srv','server',775,300,'server')],
+    edges:[['cl','srv'],['ca','srv']]},
+  auth:{nodes:[n('u','pill',145,300,'user','user'),n('idp','shield',478,170,'identity · AuthN'),n('api','gateway',478,432,'API · AuthZ'),n('data','db',838,300,'data')],
+    edges:[['u','idp'],['u','api'],['api','data']]},
+  secrets:{nodes:[n('dev','pill',155,300,'developer','user'),n('vault','lock',500,300,'secrets vault'),n('svc','server',838,300,'least privilege')],
+    edges:[['dev','vault'],['vault','svc']]},
+  cicd:{nodes:[n('dev','pill',105,300,'dev','user'),n('git','git',305,300,'git push'),n('ci','ci',505,300,'CI · tests'),n('cd','deploy',705,300,'CD · deploy'),n('prod','server',898,300,'prod')],
+    edges:[['dev','git'],['git','ci'],['ci','cd'],['cd','prod']]},
+  observ:{nodes:[n('svc','server',205,300,'service'),n('logs','doc',600,150,'logs'),n('met','dash',640,300,'metrics'),n('tr','doc',600,452,'traces'),n('dash','dash',888,300,'dashboard')],
+    edges:[['svc','logs'],['svc','met'],['svc','tr'],['logs','dash'],['met','dash'],['tr','dash']]},
+  short:{nodes:[n('u','pill',125,300,'user','user'),n('api','gateway',415,300,'short.ly API'),n('cache','cache',688,168,'hot keys'),n('db','db',705,432,'key → URL')],
+    edges:[['u','api'],['api','cache'],['api','db'],['cache','db']]},
+  feed:{nodes:[n('post','pill',125,215,'poster','user'),n('fan','queue',425,300,'fan-out workers'),n('cache','cache',700,175,'feed caches'),n('read','pill',868,425,'follower','user')],
+    edges:[['post','fan'],['fan','cache'],['cache','read']]},
+  chat:{nodes:[n('ana','pill',135,300,'Ana','user'),n('ws','ws',478,300,'ws gateway'),n('ben','pill',845,205,'Ben','user'),n('store','db',478,478,'messages'),n('pres','cache',845,425,'presence')],
+    edges:[['ana','ws'],['ws','ben'],['ws','store'],['ws','pres']]},
+  ratelimit:{nodes:[n('cl','pill',145,300,'client','user'),n('lim','limiter',470,320,'token bucket'),n('redis','cache',470,130,'counters · Redis'),n('api','server',812,320,'API')],
+    edges:[['cl','lim'],['lim','redis'],['lim','api']]}
+};
+
+/* ================================================================
+   COURSE CONTENT
+================================================================ */
+const st=(name,kind,title,body,key,x={})=>({name,kind,title,body:[].concat(body),key,...x});
+const fl=(a,b,kind,delay,dur=900,label)=>({a,b,kind,delay,dur,label});
+const M=(id,label,icn,unit='ms')=>({id,label,icn,unit});
+const L=(id,title,min,level,sub,learn,metrics,scene,steps)=>({id,title,min,level,sub,learn,metrics,scene,steps});
+
+const MODULES=[
+{num:'01',title:'Foundations',color:'#7a5c3e',lessons:[
+L('request','How a Request Travels',10,'Beginner','Follow one page load hop by hop — and find out where the time really goes.',
+ ['What DNS does and why it is cached','Why a connection costs round trips','The path: browser → server → database → back','Where page-load time actually goes','Cases: a slow query and a distant user'],
+ [M('dns','DNS LOOKUP','globe'),M('conn','CONNECT','swap'),M('srv','REQUEST + SERVER','server'),M('dl','DOWNLOAD','download'),M('total','TOTAL','clock')],
+ 'web',[
+ st('Hit Enter','PROBLEM','Users say the shop feels slow',
+  ['Before you can make something faster, you need to know where the time goes. So let’s follow a single page load.','You type <code>shop.example</code> and press Enter. About a sixth of a second later the page appears. A lot happens in between.'],
+  'Every web request is a conversation between machines. Each step costs time, and the costs add up.',
+  {add:['url','laptop','you'],focus:['laptop']}),
+ st('Find address','CONCEPT','DNS: the internet’s phone book',
+  ['Names are for humans; machines need numbers. Your browser asks a DNS resolver: “what address is <code>shop.example</code>?”','The answer — <code>203.0.113.7</code> — comes back in ~15 ms. Next time it’s cached, so this step costs almost nothing.'],
+  'DNS turns names into IP addresses. Caching makes repeat lookups nearly free.',
+  {add:['dns'],flights:[fl('laptop','dns','req',200,800,'shop.example?'),fl('dns','laptop','res',1200,800,'203.0.113.7')],metrics:{dns:15},focus:['dns'],note:'DNS ≈ 15 ms cold · ~0 ms cached'}),
+ st('Connect','CONCEPT','Say hello before you talk',
+  ['TCP needs a handshake so both sides agree to talk. HTTPS adds TLS round trips to agree on encryption.','Each round trip costs the full distance to the server and back. Here: ~45 ms before a single byte of the page moves.'],
+  'Connections cost round trips. Latency is a tax you pay per trip, not per byte.',
+  {flights:[fl('laptop','server','hs',200,750,'SYN'),fl('server','laptop','hs',1050,750,'SYN-ACK'),fl('laptop','server','hs',1950,750,'TLS hello'),fl('server','laptop','hs',2800,750,'TLS ok')],metrics:{conn:45},focus:['laptop','server'],note:'2 round trips before any data'}),
+ st('Request','CONCEPT','Ask for the page',
+  ['Now the browser sends <code>GET /</code> over the open connection. The web server receives it and starts building the page.','It runs your code, checks the session, renders a template. That work takes ~60 ms here.'],
+  'The request is tiny; the server’s work is what you’re waiting for.',
+  {flights:[fl('laptop','server','req',200,800,'GET /')],metrics:{srv:60},focus:['server']}),
+ st('Fetch data','CONCEPT','The server asks the database',
+  ['The page needs products, so the server queries the database: <code>SELECT … FROM products</code>.','The database finds 42 rows and sends them back. Notice the server is mostly waiting — this is where most app time hides.'],
+  'Servers spend most of their time waiting on databases and other services.',
+  {add:['db'],flights:[fl('server','db','req',200,700,'SELECT products'),fl('db','server','res',1100,700,'42 rows')],focus:['db']}),
+ st('Response','CONCEPT','HTML comes home',
+  ['The server replies <code>200 OK</code> with the HTML. Downloading it takes ~40 ms on this connection.','Add it up: 15 + 45 + 60 + 40 ≈ 160 ms. That’s the “sixth of a second” from the start.'],
+  'Page time = DNS + connect + server work + download. Measure each part separately.',
+  {flights:[fl('server','laptop','res',200,950,'200 OK · HTML')],metrics:{dl:40,total:160},focus:['laptop'],note:'15 + 45 + 60 + 40 ≈ 160 ms'}),
+ st('More files','CONCEPT','One page, many requests',
+  ['The HTML references <code>app.js</code>, <code>style.css</code>, images… each is its own request. Static files come from a CDN edge nearby.','Dynamic calls still go to the origin. A page load is a waterfall of dozens of these conversations.'],
+  'CDNs serve static files from close to the user, skipping long round trips.',
+  {add:['cdn'],flights:[fl('laptop','cdn','req',200,600,'app.js'),fl('cdn','laptop','res',900,600,'200 OK'),fl('laptop','server','req',1700,800,'/api/cart'),fl('server','laptop','res',2600,800,'JSON')],focus:['cdn'],note:'static → edge · dynamic → origin'}),
+ st('Slow query','CASE','One query eats 400 ms',
+  ['A report page filters products without an index. The database scans every row — 400 ms instead of 5.','Total jumps to ~560 ms. Nothing else changed. One missing index made the whole shop feel slow.'],
+  'Find the slowest hop before optimizing anything. Usually it’s a query.',
+  {flights:[fl('server','db','req',200,600,'SELECT … WHERE'),fl('db','server','res',1200,2200,'full scan!')],metrics:{srv:460,total:560},alert:['db'],note:'missing index → full table scan'}),
+ st('Far away','CASE','Physics sends its regards',
+  ['Same code, same query — but the user is in Sydney and the server in Virginia. Every round trip now costs ~200 ms.','The handshakes alone add 400 ms. You can’t fix distance with a faster CPU; you fix it with edges and regions.'],
+  'Latency has a physics floor. Move data closer to users instead of making servers faster.',
+  {add:['far'],flights:[fl('far','server','req',200,1600,'GET /'),fl('server','far','res',2100,1600,'200 OK')],metrics:{conn:245,total:760},focus:['far'],note:'Sydney → Virginia ≈ 200 ms per round trip'}),
+ st('Recap','RECAP','Where did the 160 ms go?',
+  ['DNS 15 · connect 45 · server 60 · download 40. Four numbers, four different fixes: cache DNS, reuse connections, index queries, shrink payloads.','Next time a page feels slow, break it into these hops first. You now know the whole conversation.'],
+  'You can’t optimize what you can’t decompose. Every request is: find → connect → ask → wait → download.',
+  {metrics:{dns:15,conn:45,srv:60,dl:40,total:160},flights:[fl('laptop','dns','req',100,500),fl('dns','laptop','res',650,500),fl('laptop','server','req',1250,650),fl('server','db','req',2000,450),fl('db','server','res',2500,450),fl('server','laptop','res',3050,650)],loop:true,focus:['laptop']})
+]),
+L('latency','Latency & Throughput',8,'Beginner','Two numbers that describe every network — and why confusing them causes bad designs.',
+ ['Latency vs throughput, precisely','Why round trips dominate small requests','Bandwidth-delay product intuition','How batching and pipelining help'],
+ [M('rtt','ROUND TRIP','clock'),M('bw','BANDWIDTH','bars','MB/s'),M('page','PAGE TIME','download')],'latency',[
+ st('Two numbers','PROBLEM','“The network is slow” — which one?',
+  ['A user in Lisbon loads a page from Virginia in 900 ms. A user next door to the server loads it in 120 ms. Same bandwidth.','Latency is how long one trip takes. Throughput is how much you can move per second. They fail differently.'],
+  'Latency = delay per trip. Throughput = volume per second. Diagnose which one hurts.',
+  {add:['you','near','far'],flights:[fl('you','near','req',200,500),fl('near','you','res',800,500),fl('you','far','req',1500,1400),fl('far','you','res',3000,1400)],metrics:{rtt:150},focus:['far']}),
+ st('Round trips','CONCEPT','Small requests pay the latency tax',
+  ['A 2 KB API call over a 150 ms link still takes ~150 ms — the bytes are free, the trip is not.','Ten sequential calls = ten taxes. This is why chatty APIs feel slow across oceans.'],
+  'For small payloads, round trips dominate. Fewer trips beats more bandwidth.',
+  {flights:[fl('you','far','req',100,900,'call 1'),fl('far','you','res',1050,900),fl('you','far','req',2050,900,'call 2'),fl('far','you','res',3000,900)],metrics:{rtt:150,page:600},note:'2 KB × 10 calls ≈ 10 × RTT'}),
+ st('Bandwidth','CONCEPT','Big transfers pay the throughput tax',
+  ['Now download a 20 MB video. At 10 MB/s that’s 2 seconds of pure transfer — latency barely matters.','Throughput is the width of the pipe; latency is its length. Big files care about width.'],
+  'Large transfers are throughput-bound. Small ones are latency-bound.',
+  {add:['pipe'],flights:[fl('you','pipe','req',200,600,'GET video'),fl('pipe','near','res',900,1800,'20 MB')],metrics:{bw:10,page:2000},focus:['pipe'],unitNote:true,note:'20 MB ÷ 10 MB/s = 2 s'}),
+ st('Batching','CONCEPT','Buy round trips in bulk',
+  ['Instead of 10 calls, send one batch request. One tax instead of ten. Or pipeline: send call 2 before call 1 returns.','HTTP/2 multiplexing and GraphQL batching are exactly this idea.'],
+  'Batch, pipeline, or multiplex to amortize the round-trip tax.',
+  {flights:[fl('you','far','req',200,1000,'batch[10]'),fl('far','you','res',1400,1000,'all results')],metrics:{page:300},note:'10 calls → 1 round trip'}),
+ st('Recap','RECAP','Length vs width',
+  ['Latency is the pipe’s length — fixed by physics and hops. Throughput is its width — buyable with money.','Design for fewer trips first; add bandwidth when payloads are genuinely big.'],
+  'Optimize trips for chatter, bandwidth for bulk. Know which problem you have.',
+  {metrics:{rtt:150,bw:10,page:300},flights:[fl('you','near','req',100,500),fl('near','you','res',700,500),fl('you','far','req',1400,1200),fl('far','you','res',2700,1200)],loop:true})
+]),
+L('napkin','Napkin Math',9,'Beginner','Estimate capacity on the back of an envelope before you write any code.',
+ ['Numbers every engineer should memorize','QPS from daily users','Storage growth per year','When one server is enough'],
+ [M('qps','AVG QPS','bars','req/s'),M('peak','PEAK QPS','bolt','req/s'),M('store','STORAGE / YR','db','GB')],'math',[
+ st('The question','PROBLEM','Will one server handle our app?',
+  ['500k daily users, each making ~20 requests. Before choosing architecture, do the arithmetic.','Average QPS = 500,000 × 20 ÷ 86,400 ≈ 116 req/s. Surprisingly small.'],
+  'Most “web scale” fears dissolve under division by 86,400.',
+  {add:['app','server'],flights:[fl('app','server','req',300,800,'~116 req/s')],metrics:{qps:116},focus:['server'],note:'500k × 20 ÷ 86,400 ≈ 116 QPS'}),
+ st('Peak','CONCEPT','Design for the spike, not the average',
+  ['Traffic isn’t flat. Lunchtime and launches can be 5–10× average. Plan for ~1,000 req/s peak.','A single modern server handles thousands of simple req/s. One box plus a replica is plenty here.'],
+  'Peak ≈ 5–10× average. Size for peak, autoscale for surprises.',
+  {flights:[fl('app','server','req',100,400),fl('app','server','req',300,400),fl('app','server','req',500,400),fl('app','server','req',700,400),fl('app','server','req',900,400)],metrics:{peak:1000},loop:true,note:'peak ≈ 10× average'}),
+ st('Storage','CONCEPT','How fast does data pile up?',
+  ['Each user creates ~2 KB of data daily: 500k × 2 KB = 1 GB/day ≈ 365 GB/year.','One disk holds years of this. You don’t need sharding — you need backups.'],
+  'Storage math decides whether you need one disk or a fleet.',
+  {add:['db'],flights:[fl('server','db','req',300,900,'1 GB/day')],metrics:{store:365},focus:['db'],note:'500k × 2 KB × 365 ≈ 365 GB/yr'}),
+ st('Cache check','CONCEPT','Reads dominate — cache the hot 5%',
+  ['If 90% of reads hit 5% of keys, a small cache absorbs most load. 116 QPS × 90% ≈ 104 QPS never reach the DB.','Memorize: memory ~100 ns, SSD ~100 µs, disk ~10 ms, same-DC RTT ~0.5 ms, cross-continent ~150 ms.'],
+  'Back-of-envelope first: QPS, storage, read/write ratio, hot-set size.',
+  {add:['cache'],flights:[fl('server','cache','req',200,500,'hot key'),fl('cache','server','res',800,500,'hit!')],focus:['cache'],loop:true,note:'memory 100 ns · SSD 100 µs · disk 10 ms'}),
+ st('Recap','RECAP','The envelope says: keep it simple',
+  ['116 avg QPS, 1k peak, 365 GB/year, 90% cacheable reads. Verdict: one app server, one DB, one cache, one replica.','Reach for distributed machinery only when the envelope demands it.'],
+  'Estimate before you architect. Simple systems win until math says otherwise.',
+  {metrics:{qps:116,peak:1000,store:365},flights:[fl('app','server','req',100,600),fl('server','cache','req',800,400),fl('cache','server','res',1300,400),fl('server','db','req',1900,500),fl('db','server','res',2500,500)],loop:true})
+])]},
+{num:'02',title:'Scaling',color:'#3f9d4e',lessons:[
+L('wall','One Server Hits a Wall',7,'Beginner','What actually breaks first when traffic grows — and the two ways out.',
+ ['The real bottlenecks: CPU, connections, disk','Vertical vs horizontal trade-offs','Why the database is usually the wall','Reading a saturation curve'],
+ [M('cpu','CPU','gear','%'),M('conn','CONNECTIONS','swap'),M('p99','P99 LATENCY','clock')],'scale',[
+ st('The wall','PROBLEM','Black Friday, 9:01 am',
+  ['Traffic 10×’d overnight. Response times climb, then timeouts. One box is saturated.','Watch what saturates: CPU pegs at 100%, connection pools fill, queues grow. Latency explodes nonlinearly near capacity.'],
+  'Systems degrade gracefully until ~80% utilization, then fall off a cliff.',
+  {add:['users','lb','s1'],flights:[fl('users','lb','req',100,500),fl('lb','s1','req',700,500),fl('users','lb','req',900,500),fl('lb','s1','req',1500,500)],metrics:{cpu:100,conn:512,p99:4200},alert:['s1'],loop:true,note:'utilization → 100% ⇒ latency → ∞'}),
+ st('Scale up','CONCEPT','Vertical: buy a bigger box',
+  ['Double the RAM and cores. Zero code changes, instant relief. But boxes have ceilings and single points of failure.','Great first move. It buys time to design the real fix.'],
+  'Vertical scaling is simple and fast — until the biggest box isn’t big enough.',
+  {metrics:{cpu:55,conn:512,p99:180},flights:[fl('users','lb','req',200,600),fl('lb','s1','req',900,600),fl('s1','lb','res',1600,600)],focus:['s1'],note:'2× cores → headroom restored'}),
+ st('Scale out','CONCEPT','Horizontal: add more boxes',
+  ['Add app 2 and app 3 behind the load balancer. Capacity grows linearly and any box can die.','The catch: requests must be able to land on any server. That forces statelessness — next lessons.'],
+  'Horizontal scaling trades hardware limits for coordination complexity.',
+  {add:['s2','s3'],flights:[fl('lb','s1','req',100,550),fl('lb','s2','req',400,550),fl('lb','s3','req',700,550)],metrics:{cpu:34,p99:120},focus:['s2','s3'],loop:true}),
+ st('The real wall','CASE','The database doesn’t scale out (easily)',
+  ['Three app servers now hammer one database. Its CPU hits 100% — the wall moved, it didn’t disappear.','Writes especially: one primary means one ceiling. Caching, replicas, and sharding exist for this.'],
+  'Stateless tiers scale freely; the stateful tier is the true bottleneck.',
+  {add:['db'],flights:[fl('s1','db','req',100,500),fl('s2','db','req',350,500),fl('s3','db','req',600,500)],metrics:{cpu:100,p99:3800},alert:['db'],loop:true,note:'the wall moved to the DB'}),
+ st('Recap','RECAP','Scale the tier that’s saturated',
+  ['Measure first. Scale up for speed, out for resilience. Then attack the stateful tier with caches and replicas.','Adding app servers to a DB-bound system just makes the DB fail faster.'],
+  'Find the saturated tier. Scaling anything else is theater.',
+  {metrics:{cpu:34,conn:220,p99:120},flights:[fl('users','lb','req',100,500),fl('lb','s2','req',700,500),fl('s2','db','req',1300,500),fl('db','s2','res',1900,500)],loop:true})
+]),
+L('vh','Vertical vs Horizontal',6,'Beginner','Choosing between a bigger machine and more machines.',
+ ['When scale-up is the right answer','Cost curves of both approaches','Failure domains and blast radius','The hybrid path most teams take'],
+ [M('cost','COST / MO','chart','$'),M('cap','CAPACITY','bars','×'),M('risk','BLAST RADIUS','target','%')],'scale',[
+ st('The choice','PROBLEM','One big box or many small ones?',
+  ['You need 4× capacity. Option A: a 4× bigger server. Option B: four servers and a balancer.','Both work. They differ in cost curve, failure behavior, and operational burden.'],
+  'There is no default answer — only trade-offs against your constraints.',
+  {add:['users','lb','s1'],metrics:{cap:1},focus:['s1']}),
+ st('Up','CONCEPT','Bigger boxes: simple, bounded',
+  ['No distributed anything. One process, one memory space, one backup. Cost grows superlinearly near the top end.','And when it dies, 100% of traffic dies with it.'],
+  'Scale-up minimizes complexity and maximizes blast radius.',
+  {metrics:{cost:1600,cap:4,risk:100},flights:[fl('users','lb','req',200,600),fl('lb','s1','req',900,600)],focus:['s1'],note:'top-end hardware prices curve upward'}),
+ st('Out','CONCEPT','More boxes: linear, complex',
+  ['Commodity machines scale linearly in cost and capacity. Lose one, lose 25% — the rest absorb it.','But now you own service discovery, deploys across fleets, and state placement.'],
+  'Scale-out minimizes blast radius and maximizes coordination work.',
+  {add:['s2','s3'],metrics:{cost:900,cap:4,risk:25},flights:[fl('lb','s1','req',100,500),fl('lb','s2','req',400,500),fl('lb','s3','req',700,500)],loop:true}),
+ st('Hybrid','CONCEPT','What teams actually do',
+  ['Scale up until it hurts, then scale out. Keep the DB on one big box with replicas; keep app tiers on many small ones.','Stateless = many small. Stateful = few big. That split resolves most debates.'],
+  'Match the strategy to the tier: stateless out, stateful up.',
+  {add:['db'],flights:[fl('s2','db','req',200,600),fl('db','s2','res',1000,600)],metrics:{cost:1100,risk:25},focus:['db']}),
+ st('Recap','RECAP','A decision rule',
+  ['Can one affordable box handle peak with headroom? Scale up. Need fault tolerance or unbounded growth? Scale out.','Revisit the decision when traffic 10×’s — not before.'],
+  'Scale up for simplicity, out for survival. Re-decide at each order of magnitude.',
+  {metrics:{cost:1100,cap:4,risk:25},flights:[fl('users','lb','req',100,500),fl('lb','s3','req',700,500),fl('s3','db','req',1300,500)],loop:true})
+]),
+L('lb','Load Balancers',8,'Beginner','The traffic cop that makes horizontal scaling possible.',
+ ['L4 vs L7 balancing','Round robin, least-conn, consistent hash','Health checks and draining','Why the LB itself needs redundancy'],
+ [M('rps','THROUGHPUT','bars','req/s'),M('spread','SPREAD σ','target'),M('health','HEALTHY','check','/3')],'scale',[
+ st('The problem','PROBLEM','Three servers, one address',
+  ['Clients know one hostname. Someone must decide which box gets each request — fairly, and only if it’s alive.','Enter the load balancer: one virtual IP in front, a fleet behind.'],
+  'A load balancer decouples “the service” from “the machines”.',
+  {add:['users','lb','s1','s2','s3'],flights:[fl('users','lb','req',200,600,'shop.example')],focus:['lb'],note:'one address → many machines'}),
+ st('Algorithms','CONCEPT','Who gets the next request?',
+  ['Round robin: take turns. Least connections: give it to the least busy. Consistent hash: same key → same box (cache-friendly).','Watch round robin spread load evenly across the fleet.'],
+  'Pick the algorithm for your workload: even spread, busy-aware, or sticky keys.',
+  {flights:[fl('lb','s1','req',100,550),fl('lb','s2','req',500,550),fl('lb','s3','req',900,550),fl('lb','s1','req',1300,550),fl('lb','s2','req',1700,550),fl('lb','s3','req',2100,550)],metrics:{rps:900,spread:4,health:3},loop:true}),
+ st('L4 vs L7','CONCEPT','Packets vs requests',
+  ['L4 balances TCP connections — fast, blind to content. L7 reads HTTP: it can route <code>/api</code> to one pool and <code>/img</code> to another.','L7 enables retries, rewrites, and per-path policies. Most app balancers are L7.'],
+  'L4 = speed and simplicity. L7 = routing intelligence.',
+  {flights:[fl('users','lb','req',100,500,'GET /api'),fl('lb','s2','req',700,500,'/api pool'),fl('users','lb','req',1400,500,'GET /img'),fl('lb','s3','req',2000,500,'/img pool')],loop:true,note:'L7 routes by path, header, cookie'}),
+ st('Health','CASE','A box goes dark',
+  ['App 2 stops answering health checks. The LB ejects it within seconds; traffic shifts to the survivors.','When it recovers, it’s added back gently. Users never notice.'],
+  'Health checks turn machine failures into non-events.',
+  {flights:[fl('lb','s1','req',100,550),fl('lb','s3','req',500,550),fl('lb','s1','req',900,550),fl('lb','s3','req',1300,550)],metrics:{health:2,spread:6},alert:['s2'],loop:true,note:'app 2 ejected · fleet absorbs'}),
+ st('Recap','RECAP','The cop needs a twin',
+  ['The LB is now a single point of failure — run two with a floating IP or DNS failover.','Pattern: redundant balancers → stateless fleet → shared state tier. That’s the skeleton of every scaled web app.'],
+  'Balance the fleet, then balance the balancer.',
+  {metrics:{rps:900,spread:4,health:3},flights:[fl('users','lb','req',100,500),fl('lb','s2','req',700,500),fl('s2','lb','res',1300,500)],loop:true})
+]),
+L('stateless','Stateless Servers & Sessions',7,'Intermediate','Why any server must be able to handle any request.',
+ ['What “state” actually means in a request','Sticky sessions and their failure mode','Externalizing sessions to Redis','JWTs as client-held state'],
+ [M('sticky','STICKY FAILS','target','%'),M('sess','SESSION READ','clock'),M('flex','FLEET FLEX','swap','%')],'stateless',[
+ st('The bug','PROBLEM','Logged out at random',
+  ['Users log in, click around, and randomly appear logged out. The login lives in app 1’s memory; the LB sent the next request to app 2.','In-memory session state silently pins users to one machine.'],
+  'Local state + load balancing = mysterious, intermittent bugs.',
+  {add:['users','lb','s1','s2'],flights:[fl('users','lb','req',100,500,'login'),fl('lb','s1','req',700,500),fl('users','lb','req',1400,500,'GET /cart'),fl('lb','s2','req',2000,500,'who are you?')],alert:['s2'],metrics:{sticky:38},note:'session lives on app 1 only'}),
+ st('Sticky','CONCEPT','Sticky sessions: the patch',
+  ['Pin each user to a server via cookie or IP hash. It works — until that server dies and takes its sessions with it.','Sticky sessions also skew load and block clean deploys. A patch, not a fix.'],
+  'Stickiness trades correctness-under-failure for a quick fix.',
+  {flights:[fl('users','lb','req',100,500),fl('lb','s1','req',700,500,'always app 1'),fl('users','lb','req',1400,500),fl('lb','s1','req',2000,500)],loop:true,note:'cookie pins user → app 1'}),
+ st('Externalize','CONCEPT','Move state out of the fleet',
+  ['Store sessions in a shared Redis. Any app server reads the same session by token. Servers become interchangeable cattle.','Now you can kill, deploy, or autoscale any box mid-session.'],
+  'Stateless servers + external state = a truly elastic fleet.',
+  {add:['sess'],flights:[fl('lb','s2','req',100,500),fl('s2','sess','req',700,450,'session:abc'),fl('sess','s2','res',1250,450,'user 42 ✓')],metrics:{sticky:0,sess:2,flex:100},focus:['sess'],note:'any server · same session'}),
+ st('JWT','CONCEPT','Let the client carry state',
+  ['Alternative: sign the session into a token the client sends every time. No server-side lookup at all.','Trade-off: you can’t revoke easily, and tokens grow. Verify signatures; keep them short-lived.'],
+  'JWTs move state to the client — cheap reads, hard revocation.',
+  {flights:[fl('users','lb','req',100,500,'Bearer eyJ…'),fl('lb','s1','req',700,500,'verify locally ✓')],metrics:{sess:0},loop:true,note:'signed token · no lookup'}),
+ st('Recap','RECAP','Cattle, not pets',
+  ['Servers should hold nothing they can’t lose. Sessions in Redis or tokens; files in object storage; config in the environment.','That discipline is what makes every later scaling lesson possible.'],
+  'If killing any server loses data, you’re not stateless yet.',
+  {metrics:{sticky:0,sess:2,flex:100},flights:[fl('users','lb','req',100,500),fl('lb','s1','req',700,450),fl('s1','sess','req',1250,400),fl('sess','s1','res',1750,400)],loop:true})
+]),
+L('autoscale','Autoscaling',7,'Intermediate','Let the fleet breathe with traffic instead of paying for peak forever.',
+ ['Metric-driven scaling loops','Cooldowns and flapping','Predictive vs reactive scaling','Scaling down safely'],
+ [M('load','AVG LOAD','gear','%'),M('fleet','FLEET SIZE','server',''),M('cost','COST / HR','chart','$')],'autoscale',[
+ st('The waste','PROBLEM','Paying for Black Friday all year',
+  ['You provisioned 10 servers for peak. At 3 am, 2 would do. You’re burning 80% of the budget on idle boxes.','Autoscaling matches fleet size to actual load, minute by minute.'],
+  'Provision for peak = pay for peak. Elasticity breaks that link.',
+  {add:['users','lb','s1','s2','s3','mon'],metrics:{load:12,fleet:3,cost:30},focus:['mon'],note:'3 boxes · 12% load · $30/hr'}),
+ st('The loop','CONCEPT','Watch → decide → act',
+  ['The autoscaler watches CPU (or queue depth, or RPS). Above 70% for 3 minutes → add a box. Below 30% → remove one.','It’s a control loop. The metrics you choose define what “busy” means.'],
+  'Autoscaling is a feedback loop: metric, threshold, action, cooldown.',
+  {flights:[fl('lb','mon','res',200,600,'cpu 78%'),fl('mon','s3','req',1000,600,'launch')],metrics:{load:78,fleet:3,cost:30},focus:['mon'],note:'threshold crossed → scale out'}),
+ st('Flapping','CASE','Thrashing at the threshold',
+  ['Load hovers at 70%. The scaler adds a box, load drops to 65%, it removes one, load rises… forever.','Cooldown periods and hysteresis (add at 70, remove at 30) stop the oscillation.'],
+  'Without cooldowns and hysteresis, control loops oscillate.',
+  {flights:[fl('mon','s3','req',100,400,'add'),fl('mon','s3','req',900,400,'remove'),fl('mon','s3','req',1700,400,'add'),fl('mon','s3','req',2500,400,'remove')],metrics:{load:70},alert:['mon'],loop:true,note:'add/remove/add/remove…'}),
+ st('Predict','CONCEPT','Scale before the spike',
+  ['Reactive scaling lags: booting a box takes minutes. Scheduled scaling pre-warms for known patterns; predictive models learn them.','Keep reactive as the safety net underneath.'],
+  'Predict for known rhythms, react for surprises.',
+  {flights:[fl('mon','s2','req',100,500,'pre-warm'),fl('mon','s3','req',500,500,'pre-warm'),fl('users','lb','req',1300,500,'9 am spike'),fl('lb','s2','req',1900,500)],metrics:{load:55,fleet:3,cost:30},note:'scheduled scale-up at 08:45'}),
+ st('Recap','RECAP','Scale down gently',
+  ['Drain connections before terminating a box; never kill mid-request. Set min/max bounds so bugs can’t scale you to zero — or to bankruptcy.','Elasticity is a cost feature and a reliability feature at once.'],
+  'Autoscale with cooldowns, bounds, and graceful drains — then stop paying for idle.',
+  {metrics:{load:45,fleet:2,cost:20},flights:[fl('lb','mon','res',100,500,'cpu 22%'),fl('mon','s3','req',900,500,'drain + remove')],focus:['mon'],note:'2 boxes · $20/hr · same SLA'})
+])]},
+{num:'03',title:'Data & Storage',color:'#7b5fd6',lessons:[
+L('sqlnosql','SQL vs NoSQL',8,'Beginner',' Choosing a data model by access pattern, not by hype.',
+ ['Relational vs document modeling','Joins vs embedding','Schema flexibility trade-offs','A practical decision checklist'],
+ [M('join','JOIN COST','clock'),M('flex','SCHEMA FLEX','bars','%'),M('tx','TXN SUPPORT','check','')],'sql',[
+ st('The fork','PROBLEM','Orders, users, products — where do they live?',
+  ['Your shop has entities with relationships. Do you model tables with foreign keys, or nested documents?','The right answer comes from how you read and write, not from which DB is trendy.'],
+  'Choose the data model that matches your access patterns.',
+  {add:['app','pg','doc'],focus:['app']}),
+ st('SQL','CONCEPT','Tables + joins: one truth, many views',
+  ['Normalize: each fact stored once. Query any combination with joins. Transactions keep multi-table updates consistent.','Cost: joins at read time, and migrations when shape changes.'],
+  'SQL optimizes for correctness and query flexibility.',
+  {flights:[fl('app','pg','req',200,700,'SELECT … JOIN'),fl('pg','app','res',1100,700,'orders ⋈ users')],metrics:{join:8,flex:40,tx:1},focus:['pg'],note:'one fact, one place'}),
+ st('NoSQL','CONCEPT','Documents: read-shaped data',
+  ['Embed the order’s items and address inside one document. One read fetches everything — no joins.','Cost: duplicated facts drift; cross-document transactions are weaker or absent.'],
+  'Documents optimize for read locality and schema agility.',
+  {flights:[fl('app','doc','req',200,600,'GET order/42'),fl('doc','app','res',900,600,'whole document')],metrics:{join:0,flex:90,tx:0},focus:['doc'],note:'one read, whole aggregate'}),
+ st('Drift','CASE','The duplicated address problem',
+  ['A user updates their address. In SQL: one row. In embedded documents: 200 past orders now disagree.','Denormalization is a promise to maintain every copy yourself.'],
+  'Every embedded copy is a future consistency bug you must own.',
+  {flights:[fl('app','doc','req',200,600,'update address ×200')],alert:['doc'],note:'200 documents to patch'}),
+ st('Recap','RECAP','The checklist',
+  ['Need multi-row transactions and ad-hoc queries? SQL. Massive scale on known key-based access? Consider a KV/document store.','And remember: Postgres does JSON too. The gap is narrower than the marketing.'],
+  'Default to relational until a concrete access pattern demands otherwise.',
+  {metrics:{join:8,flex:40,tx:1},flights:[fl('app','pg','req',100,600),fl('pg','app','res',900,600)],loop:true})
+]),
+L('indexes','Indexes Explained',8,'Beginner','The single highest-leverage performance tool in your database.',
+ ['What a B-tree index actually is','Why scans get slow and seeks stay fast','Composite index ordering','The write cost of every index'],
+ [M('scan','FULL SCAN','clock'),M('seek','INDEX SEEK','clock'),M('writes','WRITE COST','up','%')],'index',[
+ st('Slow page','PROBLEM','The 400 ms query returns',
+  ['<code>WHERE category = ’shoes’</code> scans all 2M rows to find 8k matches. The database reads everything to answer almost nothing.','This is the slow hop from lesson 1, now under the microscope.'],
+  'Without an index, every query is a full table scan.',
+  {add:['app','db'],flights:[fl('app','db','req',200,700,'WHERE category'),fl('db','app','res',1100,1800,'2M rows read')],metrics:{scan:400},alert:['db'],note:'2,000,000 rows → 8,000 matches'}),
+ st('B-tree','CONCEPT','A sorted shortcut',
+  ['An index is a sorted B-tree of (category → row pointers). Find ‘shoes’ in ~4 page hops, then fetch only matching rows.','Logarithmic lookup: doubling the table adds one hop, not double the work.'],
+  'Indexes turn O(n) scans into O(log n) seeks.',
+  {add:['idx'],flights:[fl('db','idx','req',200,450,'seek shoes'),fl('idx','db','res',750,450,'8k pointers'),fl('db','app','res',1400,600,'8k rows')],metrics:{scan:400,seek:5},focus:['idx'],note:'4 page hops vs 2M rows'}),
+ st('Composite','CONCEPT','Order matters: leftmost prefix',
+  ['Index on <code>(category, price)</code> serves “category = X” and “category = X AND price < Y” — but NOT “price < Y” alone.','Think phone book: sorted by last name, then first. You can’t search by first name alone.'],
+  'Composite indexes serve prefixes of their column list, left to right.',
+  {flights:[fl('app','db','req',100,500,'cat + price ✓'),fl('db','idx','req',700,400),fl('app','db','req',1500,500,'price only ✗'),fl('db','app','res',2100,1200,'scan…')],loop:true,note:'(category, price) ≠ (price)'}),
+ st('Write cost','CASE','Indexes aren’t free',
+  ['Every INSERT must update every index. Ten indexes = ten extra writes per row, plus storage and cache pressure.','Index the queries you actually run; drop the ones you don’t.'],
+  'Indexes trade write speed and space for read speed.',
+  {flights:[fl('app','db','req',200,600,'INSERT'),fl('db','idx','req',900,500,'update tree')],metrics:{writes:35},focus:['idx'],note:'each index = +1 write per row'}),
+ st('Recap','RECAP','Read the query plan',
+  ['<code>EXPLAIN</code> shows scan vs seek. Add indexes for hot filters and joins, watch write latency, and re-check after schema changes.','Most “we need a bigger database” moments are missing-index moments.'],
+  'Before scaling hardware, read the plan. The fix is usually one CREATE INDEX.',
+  {metrics:{scan:400,seek:5,writes:35},flights:[fl('app','db','req',100,500),fl('db','idx','req',700,400),fl('idx','db','res',1200,400),fl('db','app','res',1700,500)],loop:true})
+]),
+L('acid','Transactions & ACID',8,'Intermediate','How databases keep money correct when everything fails at once.',
+ ['Atomicity via rollback','Isolation levels and anomalies','Durability via write-ahead logs','When to relax guarantees'],
+ [M('atomic','ATOMICITY','check',''),M('iso','ISOLATION','lock',''),M('wal','WAL SYNC','clock')],'acid',[
+ st('The transfer','PROBLEM','Debit without credit',
+  ['Transfer $100: debit A, credit B. The server crashes between the two. Money vanished.','A transaction makes both writes succeed together or not at all.'],
+  'Atomicity: partial work must never become visible.',
+  {add:['app','db'],flights:[fl('app','db','req',200,600,'debit A ✓'),fl('app','db','req',1100,600,'credit B …crash')],alert:['db'],note:'crash between writes = lost money'}),
+ st('WAL','CONCEPT','Write the promise first',
+  ['Before touching data pages, the DB appends the change to a write-ahead log and fsyncs it. Crash? Replay the log.','Durability = the log survived, even if the data file didn’t catch up.'],
+  'The WAL is the database’s source of truth; pages are a cache of it.',
+  {add:['wal'],flights:[fl('db','wal','req',200,500,'log: debit+credit'),fl('wal','db','res',800,400,'fsync ✓'),fl('db','app','res',1400,500,'COMMIT ok')],metrics:{wal:3},focus:['wal'],note:'log first, data later'}),
+ st('Isolation','CONCEPT','Concurrent transactions shouldn’t peek',
+  ['Two transfers run at once. Without isolation, one reads the other’s half-done state (dirty read) or double-counts (lost update).','Isolation levels trade concurrency for correctness: read-committed → repeatable-read → serializable.'],
+  'Isolation defines which concurrent anomalies are allowed.',
+  {flights:[fl('app','db','req',100,500,'txn 1'),fl('app','db','req',500,500,'txn 2'),fl('db','app','res',1300,500,'serialized ✓')],metrics:{iso:1},loop:true,note:'serializable = as-if one at a time'}),
+ st('Relax','CASE','Not everything needs SERIALIZABLE',
+  ['A page-view counter can tolerate lost updates; a balance cannot. Use cheap isolation for analytics, strict for money.','Match the guarantee to the business cost of being wrong.'],
+  'Strong guarantees cost throughput — pay for them where correctness pays you back.',
+  {flights:[fl('app','db','req',100,400,'views++ (relaxed)'),fl('app','db','req',900,700,'balance (strict)')],loop:true,note:'counters: eventual · money: ACID'}),
+ st('Recap','RECAP','A, C, I, D in one line each',
+  ['Atomic: all or nothing. Consistent: constraints hold. Isolated: no peeking. Durable: commits survive crashes.','You get these from one database cheaply. Across services, you’ll rebuild them by hand — later lessons.'],
+  'ACID is a contract. Know which clauses your feature actually needs.',
+  {metrics:{atomic:1,iso:1,wal:3},flights:[fl('app','db','req',100,500),fl('db','wal','req',700,400),fl('wal','db','res',1200,400),fl('db','app','res',1700,500)],loop:true})
+]),
+L('replication','Replication',8,'Intermediate','Copies of your data for survival and read scale — and the lag they bring.',
+ ['Primary/replica topology','Sync vs async replication','Replication lag and read-your-writes','Failover and split-brain'],
+ [M('lag','REPLICA LAG','clock'),M('reads','READ SCALE','bars','×'),M('rpo','DATA LOSS','target','s')],'replica',[
+ st('One copy','PROBLEM','The primary dies at 2 am',
+  ['One database, one disk. When it dies, the shop is down until restore — hours. And backups are minutes stale.','Replication keeps live copies ready to serve.'],
+  'A single copy of data is a single point of failure and a read ceiling.',
+  {add:['app','pri'],flights:[fl('app','pri','req',200,600,'write')],alert:['pri'],note:'no copies = downtime + data loss'}),
+ st('Ship the log','CONCEPT','Replicas replay the WAL',
+  ['The primary streams its write-ahead log to replicas, which replay it. Same trick as durability, now across machines.','Async: commit fast, replicas trail by milliseconds. Sync: wait for a replica ack — safer, slower.'],
+  'Replication is the WAL, shipped. Sync vs async is latency vs safety.',
+  {add:['r1','r2'],flights:[fl('pri','r1','res',200,600,'WAL stream'),fl('pri','r2','res',400,600,'WAL stream')],metrics:{lag:40,rpo:0},focus:['r1','r2'],loop:true}),
+ st('Read scale','CONCEPT','Send reads to replicas',
+  ['Writes go to the primary; reads fan out to replicas. 3 copies ≈ 3× read capacity.','The primary’s job shrinks to writes — often 10% of traffic.'],
+  'Read replicas multiply read capacity without touching write paths.',
+  {flights:[fl('app','r1','req',100,500,'SELECT'),fl('r1','app','res',700,500,'rows'),fl('app','pri','req',1400,500,'INSERT')],metrics:{reads:3},loop:true}),
+ st('Lag','CASE','“I just saved it — where is it?”',
+  ['User edits profile (primary), reload reads a replica 200 ms behind — old data. Read-your-writes violated.','Fix: read your own writes from the primary, or wait for the replica to catch up to your commit LSN.'],
+  'Async replication means stale reads are a feature, not a bug — design for it.',
+  {flights:[fl('app','pri','req',100,500,'save name'),fl('app','r1','req',900,500,'read name'),fl('r1','app','res',1500,500,'old name ✗')],metrics:{lag:200},alert:['r1'],note:'replica 200 ms behind primary'}),
+ st('Recap','RECAP','Failover without split-brain',
+  ['Promote a replica when the primary dies — but fence the old primary first, or two writers diverge (split-brain).','Use a consensus-backed manager; never let two nodes believe they’re primary.'],
+  'Replicas give survival and read scale; lag and failover are the price. Pay deliberately.',
+  {metrics:{lag:40,reads:3,rpo:0},flights:[fl('app','pri','req',100,500),fl('pri','r1','res',700,500),fl('pri','r2','res',900,500)],loop:true})
+]),
+L('sharding','Sharding',9,'Intermediate','Splitting one dataset across machines when one box can’t hold it.',
+ ['Range vs hash sharding','Choosing a shard key','Hot shards and resharding pain','Cross-shard queries and joins'],
+ [M('size','PER SHARD','db','GB'),M('hot','HOTTEST SHARD','bolt','%'),M('xq','CROSS-SHARD','swap','%')],'shard',[
+ st('Too big','PROBLEM','20 TB, one disk',
+  ['The table outgrew the biggest box. Replicas copy everything — they don’t shrink anything.','Sharding partitions rows across machines: each holds a slice.'],
+  'Replication copies data; sharding divides it. Different problems.',
+  {add:['app','rt','a'],metrics:{size:20000},alert:['a'],note:'20 TB > any single box'}),
+ st('Split','CONCEPT','Pick a key, pick a rule',
+  ['Range: a–h, i–p, q–z. Simple, but sequential keys pile onto one shard. Hash: spread evenly, but range scans hit every shard.','The shard key is the most consequential choice you’ll make — changing it later means moving everything.'],
+  'Shard key = your future hot spots and your future migrations.',
+  {add:['b','c'],flights:[fl('rt','a','req',100,500,'user ann'),fl('rt','b','req',600,500,'user mo'),fl('rt','c','req',1100,500,'user zed')],metrics:{size:6600},focus:['rt'],loop:true}),
+ st('Hot shard','CASE','Celebrity problem',
+  ['Shard by user_id and one celebrity’s shard takes 40% of traffic. Even distribution of keys ≠ even distribution of load.','Fix: split hot keys further, cache them, or isolate them on dedicated shards.'],
+  'Hashing spreads keys, not popularity. Measure load, not row counts.',
+  {flights:[fl('rt','b','req',100,400),fl('rt','b','req',400,400),fl('rt','b','req',700,400),fl('rt','b','req',1000,400)],metrics:{hot:40},alert:['b'],loop:true,note:'one key ≠ one load unit'}),
+ st('Cross-shard','CASE','Joins across the split',
+  ['“Orders joined with users” now spans machines. No local join; the app fetches from both and stitches.','Design so common queries live inside one shard (co-locate by the same key). Accept fan-out for the rest.'],
+  'Sharding trades local joins for horizontal capacity. Co-locate what you join.',
+  {flights:[fl('app','rt','req',100,400),fl('rt','a','req',600,450),fl('rt','c','req',800,450),fl('a','app','res',1400,450),fl('c','app','res',1600,450,'stitch')],metrics:{xq:18},note:'fan-out + app-side join'}),
+ st('Recap','RECAP','Shard last, shard well',
+  ['Try indexes, caching, replicas, and bigger boxes first. When you must shard: choose a high-cardinality, query-aligned key and plan resharding from day one.','Sharding is a one-way door — walk through it with a map.'],
+  'Sharding solves capacity by sacrificing locality. Exhaust cheaper options first.',
+  {metrics:{size:6600,hot:12,xq:18},flights:[fl('app','rt','req',100,450),fl('rt','b','req',700,450),fl('b','app','res',1300,450)],loop:true})
+]),
+L('cache101','Caching 101',7,'Beginner','The fastest query is the one you never run.',
+ ['Cache-aside pattern','Hit ratio and its leverage','TTLs and staleness budgets','What belongs in a cache'],
+ [M('hit','HIT RATIO','target','%'),M('dbq','DB QPS','db',''),M('lat','READ LATENCY','clock')],'cache',[
+ st('Same question','PROBLEM','The homepage hits the DB 900×/s',
+  ['Every visitor runs the same “top products” query. The DB answers identically 900 times a second.','Compute once, remember the answer, serve memory copies.'],
+  'Caching exploits repetition: most reads ask yesterday’s questions.',
+  {add:['app','db'],flights:[fl('app','db','req',100,400),fl('db','app','res',600,400),fl('app','db','req',1100,400),fl('db','app','res',1600,400)],metrics:{dbq:900,lat:25},loop:true,alert:['db']}),
+ st('Cache-aside','CONCEPT','Look aside, then fall through',
+  ['App checks cache first. Hit → return in ~1 ms. Miss → query DB, store result with a TTL, return.','The app owns the pattern; the cache stays dumb and fast.'],
+  'Cache-aside: read cache → on miss read DB → populate → return.',
+  {add:['cache'],flights:[fl('app','cache','req',100,350,'top products?'),fl('cache','app','res',550,350,'HIT ✓'),fl('app','cache','req',1200,350,'new key?'),fl('app','db','req',1700,450,'miss → DB'),fl('db','app','res',2250,450),fl('app','cache','req',2850,350,'set TTL 60s')],metrics:{hit:92,dbq:72,lat:2},focus:['cache'],note:'92% hits → DB load ÷ 12'}),
+ st('Leverage','CONCEPT','Hit ratio is leverage',
+  ['At 90% hits, DB load drops 10×. At 99%, 100×. The last few percent are worth more than the first ninety.','Small hot sets make high ratios achievable — cache the 5% of keys serving 90% of reads.'],
+  'Every point of hit ratio multiplies your database’s effective capacity.',
+  {flights:[fl('app','cache','req',100,300),fl('cache','app','res',500,300),fl('app','cache','req',900,300),fl('cache','app','res',1300,300),fl('app','db','req',1900,500,'rare miss')],metrics:{hit:99,dbq:9,lat:1},loop:true}),
+ st('Staleness','CASE','The price changed 30 s ago',
+  ['TTL 60 s means prices can be a minute old. For a homepage: fine. For checkout: re-read from the DB.','Set TTLs by business tolerance, and bypass cache on correctness-critical paths.'],
+  'A cache is a staleness budget. Spend it where being slightly wrong is cheap.',
+  {flights:[fl('app','cache','req',100,350,'price?'),fl('cache','app','res',550,350,'old price'),fl('app','db','req',1200,500,'checkout: fresh')],note:'TTL = how wrong you may be'}),
+ st('Recap','RECAP','Cache the reads, not the truth',
+  ['The DB remains the source of truth; the cache is a disposable accelerator. If flushing it only slows you down — not breaks you — you’ve done it right.','Next: the hard part — keeping copies honest.'],
+  'Cache-aside + TTL + high hit ratio = the cheapest 10× you’ll ever buy.',
+  {metrics:{hit:99,dbq:9,lat:1},flights:[fl('app','cache','req',100,300),fl('cache','app','res',500,300)],loop:true})
+]),
+L('invalidate','Cache Invalidation',8,'Intermediate','“There are only two hard things…” — here’s the other one.',
+ ['Why TTL-only fails for writes','Delete-on-write vs update-on-write','Race conditions and double-delete','Versioned keys as an escape hatch'],
+ [M('stale','STALE READS','clock','s'),M('race','RACE WINDOW','target','ms'),M('hits','HIT RATIO','target','%')],'invalid',[
+ st('The lie','PROBLEM','The cache confidently lies',
+  ['Writer updates the DB. The cache still serves the old value for up to a TTL. Users see a price that no longer exists.','TTLs bound staleness; they don’t eliminate it on writes.'],
+  'Every cache write policy is a decision about who may see stale data, for how long.',
+  {add:['app','cache','db','wr'],flights:[fl('wr','db','req',200,500,'price = $9'),fl('app','cache','req',1000,350),fl('cache','app','res',1450,350,'$12 ✗')],metrics:{stale:60},alert:['cache'],note:'DB says $9 · cache says $12'}),
+ st('Delete','CONCEPT','Invalidate on write',
+  ['After committing to the DB, delete the cache key. Next read misses and refetches fresh data.','Delete, don’t update: computing the new cache value invites ordering bugs; deletion is idempotent.'],
+  'Write DB → delete key. Let the next reader rebuild the truth.',
+  {flights:[fl('wr','db','req',100,500,'commit $9'),fl('wr','cache','req',800,400,'DEL price'),fl('app','cache','req',1500,350,'miss'),fl('app','db','req',2000,450),fl('db','app','res',2550,450,'$9 ✓')],metrics:{stale:1},focus:['cache']}),
+ st('Race','CASE','The interleaving that bites',
+  ['Reader misses, reads old DB value… writer commits and deletes… reader then stores its old value. Stale until TTL.','Mitigations: short TTLs as backstop, delayed double-delete, or versioned keys.'],
+  'Cache races are real: a slow reader can resurrect deleted data.',
+  {flights:[fl('app','db','req',100,900,'read $12 (slow)'),fl('wr','db','req',400,400,'commit $9'),fl('wr','cache','req',900,300,'DEL'),fl('app','cache','req',1400,400,'SET $12 ✗')],metrics:{race:900,stale:60},alert:['cache'],note:'slow reader re-poisons cache'}),
+ st('Version','CONCEPT','Versioned keys never lie',
+  ['Store under <code>price:v42</code>; bump the version on write. Readers ask for the current version — old entries are simply never requested again.','No deletion races; garbage expires by TTL. Costs a version lookup.'],
+  'Immutable, versioned keys turn invalidation into a pointer swap.',
+  {flights:[fl('wr','db','req',100,400,'commit v43'),fl('app','cache','req',800,350,'price:v43'),fl('cache','app','res',1250,350,'fresh ✓')],metrics:{stale:0,race:0,hits:97},note:'bump version → old keys orphaned'}),
+ st('Recap','RECAP','Pick your staleness contract',
+  ['TTL-only for tolerant reads. Delete-on-write + short TTL for most apps. Versioned keys where races are unacceptable.','Write the contract down — “users may see X seconds stale” — and design to it.'],
+  'Invalidation is a policy, not a trick. Choose it explicitly per dataset.',
+  {metrics:{stale:1,race:0,hits:97},flights:[fl('wr','db','req',100,450),fl('wr','cache','req',700,350,'DEL'),fl('app','cache','req',1300,350),fl('app','db','req',1800,450)],loop:true})
+]),
+L('cdns','CDNs & Edge Caches',7,'Beginner','Putting copies of your content next to your users.',
+ ['How edge PoPs absorb traffic','Cache keys and Vary headers','Purging and stale-while-revalidate','Dynamic acceleration at the edge'],
+ [M('rtt','USER RTT','clock'),M('off','ORIGIN OFFLOAD','target','%'),M('purge','PURGE TIME','replay','s')],'cdn',[
+ st('Distance','PROBLEM','Lisbon ↔ Virginia, 90 times a day',
+  ['Every image, script, and stylesheet crosses the Atlantic. 150 ms RTT × dozens of assets = a sluggish shop.','The origin can’t move. The copies can.'],
+  'You can’t beat the speed of light — but you can shorten the distance.',
+  {add:['user','origin'],flights:[fl('user','origin','req',200,1300,'app.js'),fl('origin','user','res',1700,1300)],metrics:{rtt:150,off:0},note:'every asset crosses the ocean'}),
+ st('Edge','CONCEPT','A cache in every city',
+  ['CDN points of presence cache your static assets worldwide. Lisbon users hit a Lisbon edge: 10 ms instead of 150.','First request per edge fetches from origin; the next thousand are local.'],
+  'CDNs are geographically distributed cache-aside, operated for you.',
+  {add:['edge'],flights:[fl('user','edge','req',100,350,'app.js'),fl('edge','origin','req',600,900,'first miss'),fl('origin','edge','res',1600,900),fl('edge','user','res',2600,350,'cached ✓'),fl('user','edge','req',3200,300),fl('edge','user','res',3600,300,'10 ms')],metrics:{rtt:10,off:95},focus:['edge'],note:'1 miss, then thousands of local hits'}),
+ st('Keys','CONCEPT','What makes a cache entry unique?',
+  ['URL alone isn’t enough: language, device, encoding vary the bytes. <code>Vary</code> headers split entries — too many variants kill hit ratio.','Normalize keys; push personalization out of cacheable assets.'],
+  'Cache key design decides hit ratio. Fewer variants, more hits.',
+  {flights:[fl('user','edge','req',100,300,'/app.js · gzip'),fl('edge','user','res',500,300,'HIT'),fl('user','edge','req',1000,300,'/app.js · br'),fl('edge','origin','req',1400,800,'variant miss')],loop:true,note:'Vary: Accept-Encoding, Accept-Language'}),
+ st('Purge','CASE','Shipping a fix, worldwide',
+  ['Bad JS deployed. Purge the URL across all PoPs — seconds, not a TTL wait. Better: hashed filenames (<code>app.9f3.js</code>) make purges unnecessary.','<code>stale-while-revalidate</code> serves the old copy instantly while refreshing in background.'],
+  'Content-hash your assets; reserve purges for emergencies.',
+  {flights:[fl('edge','origin','req',100,700,'revalidate'),fl('origin','edge','res',900,700,'app.9f3.js')],metrics:{purge:3},note:'immutable URLs + short HTML TTL'}),
+ st('Recap','RECAP','The edge is your first cache layer',
+  ['CDN → app cache → DB cache: each layer absorbs repetition closer to the user. 95% offload means the origin serves 1/20th of the traffic.','Latency drops for users AND load drops for you — the rare double win.'],
+  'Push bytes to the edge; keep the origin for truth and personalization.',
+  {metrics:{rtt:10,off:95,purge:3},flights:[fl('user','edge','req',100,300),fl('edge','user','res',500,300)],loop:true})
+]),
+L('blobs','Object Storage & Blobs',6,'Beginner','Where images, videos, and backups actually live.',
+ ['Why files don’t belong in the DB or on app disks','Buckets, keys, and presigned URLs','Serving blobs through CDNs','Durability nines and lifecycle tiers'],
+ [M('size','AVG OBJECT','image','MB'),M('dur','DURABILITY','shield','9s'),M('cost','COST / GB','chart','$')],'blob',[
+ st('Wrong home','PROBLEM','User avatars in the database',
+  ['Storing images as rows bloats backups, kills cache efficiency, and pins bytes to app disks that autoscaling destroys.','Files need a store built for files.'],
+  'Databases are for structured truth; blobs are for bytes.',
+  {add:['app'],alert:['app'],note:'BLOBs in rows = slow everything'}),
+ st('Buckets','CONCEPT','An infinite key→bytes map',
+  ['Object storage: PUT <code>avatars/u42.jpg</code> into a bucket; GET it back. No filesystem, no size limit, 11 nines of durability via internal replication.','Cheap, elastic, and boring — exactly what you want for bytes.'],
+  'Object storage trades filesystem semantics for unlimited scale and durability.',
+  {add:['store'],flights:[fl('app','store','req',200,700,'PUT avatar.jpg'),fl('store','app','res',1100,500,'201 ✓')],metrics:{size:2,dur:11,cost:0.02},focus:['store']}),
+ st('Presign','CONCEPT','Let clients upload directly',
+  ['Your API issues a presigned URL; the browser uploads straight to the bucket. Bytes never transit your servers.','Same for downloads of private files. Your app handles permissions, not payloads.'],
+  'Presigned URLs keep bulk bytes off your app tier entirely.',
+  {flights:[fl('app','store','req',100,500,'sign URL'),fl('store','app','res',700,500,'PUT url ✓')],note:'client → bucket, directly'}),
+ st('Serve','CONCEPT','CDN in front, always',
+  ['Public assets: bucket behind a CDN. Edge caches absorb viral traffic; origin egress stays tiny.','Lifecycle rules move cold objects to cheaper tiers automatically.'],
+  'Blob store + CDN = cheap storage, fast global reads.',
+  {add:['cdn'],flights:[fl('cdn','store','req',200,600,'fetch once'),fl('store','cdn','res',900,600),fl('cdn','store','req',1700,300,'cached after')],metrics:{cost:0.01},focus:['cdn'],loop:true}),
+ st('Recap','RECAP','The storage triad',
+  ['Structured data → database. Hot small values → cache. Big immutable bytes → object store + CDN.','Each tool does one job well; forcing one to do all three is how systems get slow and expensive.'],
+  'Right store, right data. Blobs in buckets, truth in tables, speed in caches.',
+  {metrics:{size:2,dur:11,cost:0.01},flights:[fl('app','store','req',100,600),fl('store','cdn','res',900,500)],loop:true})
+]),
+L('consistency','Consistency Models',9,'Advanced','What “the data” means when there are many copies of it.',
+ ['Strong vs eventual consistency','Read-your-writes and monotonic reads','Quorums: W + R > N','Session guarantees as a middle path'],
+ [M('w','WRITE QUORUM','up',''),M('r','READ QUORUM','download',''),M('stale','STALE WINDOW','clock')],'consist',[
+ st('Two answers','PROBLEM','Which node is right?',
+  ['You write “name = Ada” to node A. A friend reads node B and sees the old name. Both nodes are “the database”.','Consistency models define what reads are allowed to return after writes.'],
+  'With replicas, “correct read” is a policy choice, not a given.',
+  {add:['cl','a','b'],flights:[fl('cl','a','req',200,500,'name=Ada'),fl('cl','b','req',1100,500,'read name'),fl('b','cl','res',1700,500,'old name')],alert:['b'],note:'A and B disagree, temporarily'}),
+ st('Strong','CONCEPT','Linearizability: one copy illusion',
+  ['Every read sees the latest write, everywhere. Achieved by coordinating nodes on every operation — paying latency each time.','Great for balances and locks; expensive for everything else.'],
+  'Strong consistency = the system behaves like a single copy, at single-copy speed costs.',
+  {flights:[fl('cl','a','req',100,500,'write'),fl('a','b','req',700,600,'sync ack'),fl('b','a','res',1400,600),fl('cl','b','req',2200,500,'read'),fl('b','cl','res',2800,500,'Ada ✓')],metrics:{stale:0},note:'coordinate before acknowledging'}),
+ st('Quorum','CONCEPT','W + R > N overlaps truth',
+  ['N=3 copies. Write to W=2, read from R=2. Any read set intersects any write set — at least one node has the latest value.','Tune W and R for latency vs safety without full coordination.'],
+  'Quorums buy overlap-based correctness without syncing everyone.',
+  {flights:[fl('cl','a','req',100,450,'write 1/2'),fl('cl','b','req',300,450,'write 2/2'),fl('cl','b','req',1100,450,'read 1/2'),fl('cl','a','req',1300,450,'read 2/2')],metrics:{w:2,r:2,stale:0},loop:true,note:'N=3 · W=2 · R=2 → overlap guaranteed'}),
+ st('Session','CASE','Eventually consistent, personally consistent',
+  ['Global staleness of seconds is fine for a feed — but users must see their own posts instantly. Session guarantees: read-your-writes + monotonic reads.','Route a user’s reads to a replica that has their writes (sticky LSN). Eventual for the world, strong for you.'],
+  'Session guarantees give each user a coherent story without global coordination.',
+  {flights:[fl('cl','a','req',100,450,'my post'),fl('cl','a','req',900,450,'my read → A ✓'),fl('cl','b','req',1700,450,'other read → B (ok)')],metrics:{stale:2},loop:true,note:'your writes follow you'}),
+ st('Recap','RECAP','Name your model',
+  ['Strong: one-copy illusion, high cost. Eventual: cheap, stale windows. Session: per-user coherence.','Write the model into the design doc. “It’s consistent” is not a specification.'],
+  'Consistency is a dial between latency and truth. Set it per feature, explicitly.',
+  {metrics:{w:2,r:2,stale:2},flights:[fl('cl','a','req',100,450),fl('a','b','res',700,550),fl('cl','b','req',1500,450)],loop:true})
+]),
+L('cap','CAP in Practice',9,'Advanced','The theorem everyone quotes and few apply correctly.',
+ ['What C, A, P actually mean','Why partitions are inevitable','CP vs AP during a real outage','PACELC: the latency trade too'],
+ [M('part','PARTITION','target',''),M('avail','AVAILABILITY','check','%'),M('lat','NORMAL LATENCY','clock')],'cap',[
+ st('The split','PROBLEM','The link between regions dies',
+  ['EU and US regions can’t talk. A user writes in EU; another reads in US. You must choose: refuse one, or diverge.','That’s CAP: under Partition, pick Consistency or Availability.'],
+  'CAP only bites during partitions — but partitions always happen eventually.',
+  {add:['cl','eu','us'],flights:[fl('cl','eu','req',200,500,'write'),fl('cl','us','req',1100,500,'read?')],alert:['eu','us'],metrics:{part:1},note:'EU ✕ US — link severed'}),
+ st('CP','CONCEPT','Choose truth, refuse some requests',
+  ['The minority side rejects writes (and maybe reads) until healed. No divergence, but errors for some users.','Banks, locks, inventory counts: correctness beats uptime.'],
+  'CP systems return errors rather than wrong answers.',
+  {flights:[fl('cl','us','req',200,500,'write'),fl('us','cl','res',900,500,'503 ✗ refuse')],metrics:{avail:66},note:'minority side: unavailable'}),
+ st('AP','CONCEPT','Choose uptime, reconcile later',
+  ['Both sides accept writes; they diverge and merge when healed (last-write-wins, CRDTs, or manual).','Carts, likes, feeds: a merged approximation beats an error page.'],
+  'AP systems stay writable and pay with reconciliation complexity.',
+  {flights:[fl('cl','eu','req',100,450,'write ✓'),fl('cl','us','req',600,450,'write ✓'),fl('eu','us','res',1600,900,'merge on heal')],metrics:{avail:100},loop:true,note:'diverge now, merge later'}),
+ st('PACELC','CONCEPT','Even without partitions, choose',
+  ['Else (no partition): Latency vs Consistency. Sync replication is consistent and slow; async is fast and eventually consistent.','CAP is the outage choice; PACELC adds the everyday choice.'],
+  'PACELC: partition → C or A; else → L or C. You choose twice.',
+  {flights:[fl('eu','us','res',100,500,'sync (slow, C)'),fl('eu','us','res',1200,250,'async (fast, L)')],metrics:{part:0,lat:40},loop:true,note:'no outage ≠ no trade-off'}),
+ st('Recap','RECAP','Classify your data, not your DB',
+  ['Balance ledger → CP. Shopping cart → AP. Most systems are both, per dataset.','And no, “CA” isn’t an option: networks partition whether you plan for it or not.'],
+  'CAP is a per-dataset decision made under partition. Make it before the outage makes it for you.',
+  {metrics:{part:0,avail:100,lat:40},flights:[fl('cl','eu','req',100,450),fl('eu','us','res',700,500),fl('cl','us','req',1400,450)],loop:true})
+])]},
+{num:'04',title:'Communication',color:'#e2762f',lessons:[
+L('rest','REST vs RPC',7,'Beginner','Two styles of talking between services — and when each shines.',
+ ['Resource-oriented vs action-oriented APIs','Idempotency of HTTP verbs','Why internal calls often prefer RPC','Contracts, versioning, and evolution'],
+ [M('calls','CALLS / PAGE','swap',''),M('bytes','PAYLOAD','download','KB'),M('lat','CALL LATENCY','clock')],'rest',[
+ st('The boundary','PROBLEM','The frontend needs the backend',
+  ['Two programs, one network. How do they agree on what a call means? Two dominant styles: REST and RPC.','The choice shapes caching, evolution, and tooling for years.'],
+  'API style is a contract about meaning, not just transport.',
+  {add:['cl','rest','rpc'],focus:['cl']}),
+ st('REST','CONCEPT','Nouns over the wire',
+  ['<code>GET /orders/42</code>, <code>POST /orders</code>. Resources + standard verbs. GETs are cacheable and safe; PUT/DELETE are idempotent.','The uniform interface lets browsers, proxies, and CDNs participate for free.'],
+  'REST leverages HTTP semantics: caching, safety, idempotency — built in.',
+  {flights:[fl('cl','rest','req',200,600,'GET /orders/42'),fl('rest','cl','res',1000,600,'200 · JSON')],metrics:{calls:6,bytes:4,lat:35},focus:['rest'],note:'GET = safe + cacheable'}),
+ st('RPC','CONCEPT','Verbs over the wire',
+  ['<code>Orders.Get(42)</code> — call a function on another machine. gRPC adds typed contracts (protobuf) and HTTP/2 streams.','Tight, fast, explicit. Perfect for internal service-to-service chatter.'],
+  'RPC optimizes for developer ergonomics and payload efficiency inside your walls.',
+  {flights:[fl('cl','rpc','req',200,450,'Orders.Get(42)'),fl('rpc','cl','res',800,450,'proto reply')],metrics:{calls:6,bytes:1,lat:18},focus:['rpc'],note:'binary + typed + multiplexed'}),
+ st('Chatty','CASE','The N+1 API',
+  ['REST page needs 6 round trips: order, user, items, prices… A single RPC <code>GetOrderPage</code> returns it all in one.','Public API: REST for compatibility. Internal aggregation: one tailored call.'],
+  'Match granularity to the caller: coarse calls for pages, fine calls for resources.',
+  {flights:[fl('cl','rest','req',100,400),fl('cl','rest','req',600,400),fl('cl','rest','req',1100,400),fl('cl','rpc','req',1900,450,'GetOrderPage'),fl('rpc','cl','res',2450,450,'all-in-one')],metrics:{calls:1,lat:20},note:'6 trips → 1 trip'}),
+ st('Recap','RECAP','Both, on purpose',
+  ['Edge: REST/HTTP+JSON for reach and caching. Core: RPC for speed and contracts. Version both; never break callers silently.','The style is a tool — pick per boundary, not per ideology.'],
+  'REST at the edge, RPC in the core. Contracts everywhere.',
+  {metrics:{calls:1,bytes:1,lat:20},flights:[fl('cl','rest','req',100,500),fl('rest','cl','res',700,500),fl('cl','rpc','req',1400,400),fl('rpc','cl','res',1900,400)],loop:true})
+]),
+L('queues','Message Queues',8,'Intermediate','Decoupling “do it now” from “do it eventually”.',
+ ['Why synchronous chains fail','At-least-once delivery and idempotent consumers','Competing consumers and scaling','Dead-letter queues and poison messages'],
+ [M('sync','SYNC CHAIN','clock'),M('backlog','BACKLOG','queue',''),M('workers','WORKERS','gear','')],'queue',[
+ st('The chain','PROBLEM','Checkout waits for everything',
+  ['Order → charge → email → analytics → shipping label, all in one request. Email provider hiccups; checkout times out.','The user’s critical path should include only what must happen now.'],
+  'Every synchronous dependency borrows its failures into your latency.',
+  {add:['prod'],flights:[fl('prod','prod','req',200,600,'wait… wait…')],metrics:{sync:2400},alert:['prod'],note:'checkout = sum of 5 services'}),
+ st('Enqueue','CONCEPT','Acknowledge now, work later',
+  ['Checkout writes the order and drops a message on a queue: 50 ms, done. Workers handle email, analytics, labels asynchronously.','The queue is a buffer that absorbs spikes and outages.'],
+  'Queues turn “call and wait” into “record and proceed”.',
+  {add:['q','w1'],flights:[fl('prod','q','req',200,450,'order.paid'),fl('q','w1','req',900,500,'deliver'),fl('w1','q','res',1600,400,'ack ✓')],metrics:{sync:50,backlog:0},focus:['q']}),
+ st('Compete','CONCEPT','Add workers, drain faster',
+  ['Backlog grows during a spike? Add competing consumers; each message goes to exactly one worker. Throughput scales linearly.','The queue smooths the burst; workers catch up when traffic subsides.'],
+  'Competing consumers convert a backlog into a throughput dial.',
+  {add:['w2','w3'],flights:[fl('q','w1','req',100,450),fl('q','w2','req',400,450),fl('q','w3','req',700,450),fl('q','w1','req',1200,450),fl('q','w2','req',1500,450)],metrics:{backlog:1200,workers:3},loop:true}),
+ st('Poison','CASE','The message that always fails',
+  ['One malformed message crashes its worker, redelivers, crashes again — forever. After N failures, move it to a dead-letter queue for inspection.','At-least-once delivery means consumers must be idempotent: processing twice must equal once.'],
+  'Design for redelivery: idempotent handlers + DLQ for poison.',
+  {flights:[fl('q','w2','req',100,400,'bad msg'),fl('w2','q','res',600,400,'nack'),fl('q','w2','req',1100,400,'retry'),fl('q','w2','res',1600,400,'nack → DLQ')],alert:['w2'],loop:true,note:'3 strikes → dead-letter queue'}),
+ st('Recap','RECAP','Async is a superpower with rules',
+  ['Queue the non-critical work, scale consumers, make handlers idempotent, and watch backlog + DLQ as your vital signs.','Users get fast acks; failures get contained; spikes get absorbed.'],
+  'Queues decouple time: accept now, process when able, never lose the work.',
+  {metrics:{sync:50,backlog:0,workers:3},flights:[fl('prod','q','req',100,400),fl('q','w3','req',700,450),fl('w3','q','res',1300,350,'ack')],loop:true})
+]),
+L('pubsub','Pub/Sub & Events',7,'Intermediate','One fact, many interested listeners — without coupling them.',
+ ['Queues vs topics','Fan-out to independent subscribers','Event schemas as contracts','Replay and event history'],
+ [M('subs','SUBSCRIBERS','branch',''),M('fanout','FAN-OUT','swap','×'),M('couple','COUPLING','target','%')],'pubsub',[
+ st('Growing list','PROBLEM','Every new feature edits checkout',
+  ['Email, then analytics, then shipping, then loyalty points — each integration adds a call inside the orders service.','The producer knows everyone. That’s coupling, and it compounds.'],
+  'Point-to-point calls make the producer own every consumer’s existence.',
+  {add:['pub'],alert:['pub'],metrics:{couple:90},note:'orders svc knows 4 teams'}),
+ st('Topic','CONCEPT','Publish facts, not commands',
+  ['Orders publishes <code>order.paid</code> to a topic once. Subscribers each get their own copy, independently.','The producer announces what happened; it doesn’t care who listens.'],
+  'Events state facts. Consumers decide consequences.',
+  {add:['topic','s1','s2','s3'],flights:[fl('pub','topic','req',200,450,'order.paid'),fl('topic','s1','res',800,450),fl('topic','s2','res',950,450),fl('topic','s3','res',1100,450)],metrics:{subs:3,fanout:3,couple:10},focus:['topic']}),
+ st('Independence','CASE','Analytics falls over',
+  ['The analytics consumer crashes for an hour. Email and shipping keep flowing; analytics replays its offset when it returns.','Each subscription has its own cursor — one slow consumer can’t block the others.'],
+  'Per-subscriber cursors isolate failures and enable replay.',
+  {flights:[fl('topic','s1','res',100,400),fl('topic','s3','res',300,400),fl('topic','s2','res',1500,700,'replay backlog')],alert:['s2'],loop:true,note:'s2 down ≠ pipeline down'}),
+ st('Schemas','CONCEPT','The event is a public API',
+  ['Consumers parse your payload. Rename a field and three teams break. Version schemas, add fields don’t remove, use a registry.','Treat events with the same discipline as REST endpoints.'],
+  'Event schemas are contracts — evolve them additively.',
+  {flights:[fl('pub','topic','req',100,400,'v2 payload'),fl('topic','s1','res',700,400,'parse ✓'),fl('topic','s2','res',900,400,'parse ✓')],loop:true,note:'{id, total, currency, …} — additive only'}),
+ st('Recap','RECAP','Queue vs topic',
+  ['Queue: one message, one worker (distribute work). Topic: one event, every subscriber (broadcast facts).','Use queues for tasks, topics for facts. Most systems need both.'],
+  'Pub/sub inverts dependency: producers publish truth, consumers opt in.',
+  {metrics:{subs:3,fanout:3,couple:10},flights:[fl('pub','topic','req',100,400),fl('topic','s1','res',650,400),fl('topic','s2','res',800,400),fl('topic','s3','res',950,400)],loop:true})
+]),
+L('realtime','WebSockets & Realtime',8,'Intermediate','When polling isn’t enough: persistent, bidirectional connections.',
+ ['Polling vs long-poll vs WebSocket','Connection state at the edge','Fan-out across gateway nodes','Presence and heartbeats'],
+ [M('poll','POLL WASTE','replay','%'),M('conn','LIVE CONNS','swap','k'),M('push','PUSH LATENCY','bolt')],'realtime',[
+ st('Polling','PROBLEM','“Any new messages?” × a million',
+  ['Chat clients poll every 2 s. 99% of responses are “nothing new”. A million users = 500k useless req/s.','Realtime needs the server to speak first.'],
+  'Polling spends capacity asking questions whose answer is usually “no”.',
+  {add:['a','ws'],flights:[fl('a','ws','req',100,350,'new?'),fl('ws','a','res',550,350,'nope'),fl('a','ws','req',1000,350,'new?'),fl('ws','a','res',1450,350,'nope')],metrics:{poll:99},loop:true,alert:['ws']}),
+ st('Upgrade','CONCEPT','One socket, both directions',
+  ['WebSocket upgrades HTTP into a persistent duplex channel. Either side sends anytime; pushes arrive in milliseconds.','The gateway holds the connection; your app publishes to it.'],
+  'WebSockets invert the conversation: servers push, clients listen.',
+  {add:['b'],flights:[fl('a','ws','hs',100,500,'upgrade'),fl('ws','a','hs',700,500,'101 ✓'),fl('b','ws','hs',1300,500,'upgrade'),fl('ws','b','hs',1900,500,'101 ✓')],metrics:{poll:0,conn:2,push:25},focus:['ws'],note:'persistent · duplex · ~0 overhead'}),
+ st('Fan-out','CONCEPT','Routing between gateways',
+  ['Ana is on gateway 1, Ben on gateway 2. A message must cross gateways — via pub/sub or a shared bus.','Connections are sticky state at the edge; the bus routes events to whoever holds the socket.'],
+  'Realtime at scale = stateful edges + a routing backbone.',
+  {flights:[fl('a','ws','req',100,400,'“hi Ben”'),fl('ws','b','res',700,400,'push ✓')],metrics:{push:25},loop:true}),
+ st('Presence','CASE','Offline, online, typing…',
+  ['Heartbeats detect dead sockets (mobile networks lie). Presence service tracks online state; typing indicators are ephemeral events — never stored.','Persist messages; keep presence in memory with TTLs.'],
+  'Not all realtime data deserves durability. Separate messages from signals.',
+  {add:['store','pres'],flights:[fl('ws','store','req',100,450,'persist msg'),fl('ws','pres','req',600,350,'Ana: online'),fl('ws','b','res',1100,350,'typing…')],focus:['pres'],loop:true,note:'messages → disk · presence → TTL memory'}),
+ st('Recap','RECAP','Push when “now” matters',
+  ['Chat, cursors, live dashboards: WebSockets. Everything else: request/response is simpler and scales easier.','Hold state at the edge, route via bus, persist only what must survive.'],
+  'Realtime is a state-management problem wearing a networking costume.',
+  {metrics:{poll:0,conn:2,push:25},flights:[fl('a','ws','req',100,350),fl('ws','b','res',600,350),fl('b','ws','req',1200,350),fl('ws','a','res',1700,350)],loop:true})
+])]},
+{num:'05',title:'Reliability',color:'#2f7fd6',lessons:[
+L('retries','Timeouts & Retries',7,'Intermediate','The two settings that decide whether failures stay small.',
+ ['Why every call needs a deadline','Retry budgets and exponential backoff','Jitter against thundering herds','Retry storms and amplification'],
+ [M('timeout','TIMEOUT','clock'),M('tries','ATTEMPTS','replay',''),M('load','RETRY LOAD','bars','%')],'retry',[
+ st('Hanging','PROBLEM','The call that never returns',
+  ['A dependency stalls. Without a timeout, your threads pile up waiting, and your service dies of someone else’s problem.','Deadlines convert infinite waits into fast, handleable errors.'],
+  'No timeout = unbounded resource consumption on someone else’s failure.',
+  {add:['cl','svc'],flights:[fl('cl','svc','req',200,2500,'waiting…')],alert:['cl'],metrics:{timeout:0},note:'threads pile up while waiting'}),
+ st('Deadline','CONCEPT','Budget your latency',
+  ['Set timeouts from your latency budget: page must load in 300 ms → dependency gets 100 ms, not 30 s.','Fail fast, fall back (cache, default, degrade) instead of hanging.'],
+  'Timeouts are latency budgets enforced at every hop.',
+  {flights:[fl('cl','svc','req',100,800),fl('svc','cl','res',1500,600,'late!')],metrics:{timeout:100},note:'cut at 100 ms · fall back'}),
+ st('Backoff','CONCEPT','Retry politely',
+  ['Transient blip? Retry — but wait 100 ms, then 200, then 400, with random jitter. Cap attempts (e.g., 3).','Jitter prevents synchronized clients from hammering in lockstep.'],
+  'Exponential backoff + jitter + attempt cap = retries that heal instead of harm.',
+  {flights:[fl('cl','svc','req',100,400,'try 1 ✗'),fl('cl','svc','req',900,400,'try 2 ✗'),fl('cl','svc','req',2100,400,'try 3 ✓'),fl('svc','cl','res',2600,400)],metrics:{tries:3},note:'100 → 200 → 400 ms (+jitter)'}),
+ st('Storm','CASE','Retries multiply load',
+  ['3 layers each retry 3× = 27× load on the failing service. Your retries become the outage.','Retry only at one layer, use retry budgets (e.g., ≤10% extra traffic), and never retry non-idempotent writes blindly.'],
+  'Retries amplify: without budgets, they turn blips into avalanches.',
+  {flights:[fl('cl','svc','req',100,250),fl('cl','svc','req',250,250),fl('cl','svc','req',400,250),fl('cl','svc','req',550,250),fl('cl','svc','req',700,250),fl('cl','svc','req',850,250)],metrics:{load:2700},alert:['svc'],loop:true,note:'3 layers × 3 retries = 27×'}),
+ st('Recap','RECAP','The reliability starter pack',
+  ['Timeout every call. Retry transient errors with backoff+jitter, once, within budget. Make writes idempotent so retries are safe.','These three habits prevent most cascading failures.'],
+  'Deadlines contain failures; disciplined retries heal them.',
+  {metrics:{timeout:100,tries:3,load:110},flights:[fl('cl','svc','req',100,400),fl('svc','cl','res',700,400)],loop:true})
+]),
+L('breaker','Circuit Breakers',7,'Intermediate','Stop calling a service that’s already down.',
+ ['The three states: closed, open, half-open','Failing fast to protect yourself','Fallbacks and graceful degradation','Breakers vs retries'],
+ [M('state','STATE','shield',''),M('fail','FAIL RATE','target','%'),M('waste','WASTED CALLS','replay','')],'breaker',[
+ st('Piling on','PROBLEM','Kicking a service while it’s down',
+  ['Payments is failing 100%. Every checkout still waits the full timeout, then retries. Your threads burn on a corpse.','You need a memory of failure: stop calling what’s broken.'],
+  'Without a breaker, every caller independently rediscover the same outage.',
+  {add:['cl','br','svc'],flights:[fl('cl','br','req',100,350),fl('br','svc','req',550,900,'timeout ✗'),fl('cl','br','req',1700,350),fl('br','svc','req',2150,900,'timeout ✗')],metrics:{fail:100,waste:100},alert:['svc'],loop:true}),
+ st('Open','CONCEPT','Trip the breaker',
+  ['After N failures, the breaker opens: calls fail instantly with a fallback (“try again shortly”, queued payment). No threads wasted.','Your service stays healthy while the dependency heals.'],
+  'Open breaker = fail fast locally instead of slowly remotely.',
+  {flights:[fl('cl','br','req',100,300),fl('br','cl','res',500,300,'fallback ✓')],metrics:{state:1,waste:0},focus:['br'],note:'OPEN · instant fallback'}),
+ st('Half-open','CONCEPT','Probe for recovery',
+  ['After a cooldown, let one trial call through (half-open). Success → close the breaker. Failure → open again.','Recovery is tested with a trickle, not a flood.'],
+  'Half-open probes recover traffic gradually and safely.',
+  {flights:[fl('cl','br','req',100,300),fl('br','svc','req',500,500,'probe'),fl('svc','br','res',1100,500,'200 ✓'),fl('br','cl','res',1700,300,'CLOSED')],metrics:{state:0,fail:5},focus:['br'],note:'probe ok → closed → normal'}),
+ st('Fallback','CASE','What does the user see?',
+  ['Breakers need answers for the open state: cached data, defaults, queued work, or honest “temporarily unavailable”.','Design fallbacks per feature — a breaker without one just fails faster.'],
+  'A breaker is only as good as its fallback path.',
+  {flights:[fl('cl','br','req',100,300),fl('br','cl','res',500,300,'cached prices')],metrics:{state:1},loop:true,note:'serve stale · queue writes · degrade UI'}),
+ st('Recap','RECAP','Retries heal, breakers contain',
+  ['Retries handle blips; breakers handle outages. Together: try briefly, then stop, then probe.','Wrap every remote dependency. Your future 3 am self says thanks.'],
+  'Fail fast, fall back, probe gently. Outages stay contained.',
+  {metrics:{state:0,fail:2,waste:0},flights:[fl('cl','br','req',100,300),fl('br','svc','req',500,400),fl('svc','br','res',1000,400),fl('br','cl','res',1500,300)],loop:true})
+]),
+L('failover','Health Checks & Failover',7,'Intermediate','Detecting death and routing around it, automatically.',
+ ['Liveness vs readiness probes','Graceful draining on deploy','Failover targets: RTO and RPO','Avoiding cascading overload'],
+ [M('detect','DETECT TIME','clock','s'),M('rto','RTO','replay','s'),M('healthy','HEALTHY','check','/2')],'failover',[
+ st('Dead box','PROBLEM','50% of requests fail',
+  ['App B is dead but still in rotation. The LB keeps sending it half the traffic. Users see every other request fail.','Detection must be automatic and fast.'],
+  'Undetected failure is worse than failure: it’s failure plus confusion.',
+  {add:['users','lb','a','b'],flights:[fl('lb','a','req',100,400),fl('a','lb','res',600,400,'200'),fl('lb','b','req',1100,400),fl('b','lb','res',1600,900,'✗ timeout')],metrics:{healthy:1,detect:0},alert:['b'],loop:true}),
+ st('Probes','CONCEPT','Ask constantly, eject quickly',
+  ['Readiness: “can you serve?” — gates LB membership. Liveness: “are you stuck?” — triggers restart. Three misses → eject.','Detection in seconds, not support tickets.'],
+  'Readiness controls traffic; liveness controls restarts. Don’t confuse them.',
+  {flights:[fl('lb','b','hs',100,300,'probe ✗'),fl('lb','b','hs',500,300,'probe ✗'),fl('lb','b','hs',900,300,'probe ✗ → eject'),fl('lb','a','req',1500,400),fl('a','lb','res',2000,400)],metrics:{detect:9,healthy:1},focus:['lb'],note:'3 strikes in 9 s → ejected'}),
+ st('Drain','CONCEPT','Deploy without dropping',
+  ['On deploy: mark unready → LB stops new requests → finish in-flight ones → terminate. Zero dropped requests.','Failover machinery doubles as deploy machinery.'],
+  'Draining = failover you schedule instead of suffer.',
+  {flights:[fl('lb','a','req',100,400,'last requests'),fl('a','lb','res',600,400,'done ✓')],note:'unready → drain → replace'}),
+ st('Cascade','CASE','The survivor overload',
+  ['Two boxes at 70% each. One dies; the survivor gets 140% and dies too. Failover completed… into total outage.','Keep N+1 headroom, or shed load during failover. Redundancy without headroom is theater.'],
+  'Survivors must absorb the dead’s load — capacity-plan for N−1.',
+  {flights:[fl('lb','a','req',100,250),fl('lb','a','req',350,250),fl('lb','a','req',600,250),fl('lb','a','req',850,250)],metrics:{healthy:0},alert:['a'],loop:true,note:'140% load → cascade'}),
+ st('Recap','RECAP','RTO and RPO',
+  ['RTO: how long until service returns. RPO: how much data you may lose. Probes + replicas + headroom are how you hit your targets.','Write the numbers down; test the failover quarterly.'],
+  'Detect fast, route around, keep headroom. Failover is a system, not a switch.',
+  {metrics:{detect:9,rto:12,healthy:2},flights:[fl('users','lb','req',100,400),fl('lb','a','req',600,400),fl('a','lb','res',1100,400)],loop:true})
+]),
+L('pressure','Backpressure & Rate Limits',8,'Intermediate','Saying “no” so the system can keep saying “yes”.',
+ ['Why unbounded queues kill systems','Load shedding by priority','Token buckets and leaky buckets','429s, Retry-After, and client behavior'],
+ [M('in','INCOMING','bars','rps'),M('cap','CAPACITY','gear','rps'),M('shed','SHED','funnel','%')],'pressure',[
+ st('Flood','PROBLEM','1000 rps into a 300 rps service',
+  ['A viral moment 3×’s traffic. Queues grow, latency climbs, everything times out — including the 300 rps you could have served.','Overload doesn’t just slow you; it destroys useful work.'],
+  'Past capacity, accepting everything means serving nothing well.',
+  {add:['prod','api'],flights:[fl('prod','api','req',100,250),fl('prod','api','req',300,250),fl('prod','api','req',500,250),fl('prod','api','req',700,250),fl('prod','api','req',900,250)],metrics:{in:1000,cap:300},alert:['api'],loop:true,note:'queue grows → all requests time out'}),
+ st('Shed','CONCEPT','Reject early, cheaply',
+  ['A limiter at the edge admits 300 rps and rejects the rest with <code>429 + Retry-After</code>. The admitted 300 stay fast.','Shed low-priority work first: recommendations before checkout.'],
+  'Load shedding protects the work you accept by refusing the rest.',
+  {add:['lim'],flights:[fl('prod','lim','req',100,300),fl('lim','api','req',500,350,'admitted'),fl('prod','lim','req',1000,300),fl('lim','prod','res',1400,300,'429')],metrics:{shed:70},focus:['lim'],note:'300 fast · 700 politely refused'}),
+ st('Bucket','CONCEPT','Token bucket: burst-friendly',
+  ['Tokens refill at r per second, bucket holds b. Requests spend a token; empty → reject. Allows bursts up to b, averages r.','Leaky bucket instead smooths to a constant outflow — pick by whether bursts are welcome.'],
+  'Token bucket = average rate + burst allowance, in one tiny algorithm.',
+  {flights:[fl('prod','lim','req',100,250),fl('prod','lim','req',250,250),fl('prod','lim','req',400,250),fl('lim','api','req',700,350,'burst ok'),fl('prod','lim','req',1400,250),fl('lim','prod','res',1750,250,'429')],loop:true,note:'refill 300/s · bucket 600'}),
+ st('Backpressure','CASE','Push back upstream',
+  ['Workers signal “slow down”: bounded queues block producers, reactive streams request(n), TCP windows shrink.','End-to-end backpressure makes the whole pipeline self-regulating instead of self-destructing.'],
+  'Backpressure propagates capacity limits upstream before buffers explode.',
+  {flights:[fl('api','lim','res',100,400,'queue 90%'),fl('lim','prod','res',700,400,'slow down')],metrics:{in:320,shed:68},note:'bounded buffers + signals'}),
+ st('Recap','RECAP','No is a feature',
+  ['Cap intake, shed by priority, return honest 429s, and propagate pressure upstream.','A system that degrades predictably beats one that collapses impressively.'],
+  'Protect capacity by refusing excess. Graceful “no” > catastrophic “yes”.',
+  {metrics:{in:320,cap:300,shed:6},flights:[fl('prod','lim','req',100,300),fl('lim','api','req',500,350),fl('api','lim','res',1000,350)],loop:true})
+])]},
+{num:'06',title:'Architecture',color:'#159f8c',lessons:[
+L('monolith','Monolith to Services',8,'Intermediate','When to split, what to split, and what it costs.',
+ ['Why monoliths are a great default','Seams: splitting along business boundaries','The distributed tax: network, data, ops','The modular monolith middle path'],
+ [M('deploy','DEPLOY TIME','up','min'),M('blast','BLAST RADIUS','target','%'),M('calls','REMOTE CALLS','swap','')],'monolith',[
+ st('Growing pains','PROBLEM','One codebase, forty engineers',
+  ['Every deploy ships everyone’s changes. One team’s memory leak kills all features. Build times hit 40 minutes.','The monolith’s coupling is now organizational, not just technical.'],
+  'Split when team coordination costs exceed distribution costs.',
+  {add:['cl','mono'],flights:[fl('cl','mono','req',200,600,'everything')],metrics:{deploy:40,blast:100},alert:['mono'],note:'one leak → whole shop down'}),
+ st('Seams','CONCEPT','Cut along business lines',
+  ['Extract orders, users, billing — each owns its data and API. High cohesion inside, narrow contracts between.','Never split by technical layer (a “database service” is a distributed monolith).'],
+  'Service boundaries = business capabilities with owned data.',
+  {add:['o','u','b'],flights:[fl('mono','o','req',100,500,'extract'),fl('mono','u','req',600,500),fl('mono','b','req',1100,500)],metrics:{blast:33},focus:['o','u','b']}),
+ st('The tax','CASE','A function call becomes a network call',
+  ['In-process: 100 ns, never fails. Remote: 2 ms, can time out, needs retries, auth, versioning, tracing.','Every seam you cut adds this tax forever. Cut fewer seams than you think.'],
+  'Distribution converts certainty into probability. Budget for it.',
+  {flights:[fl('o','u','req',100,500,'GetUser'),fl('u','o','res',800,500),fl('o','b','req',1500,500,'Charge'),fl('b','o','res',2200,500,'timeout?')],metrics:{calls:14},alert:['b'],note:'now: retries, auth, tracing, versions'}),
+ st('Modular','CONCEPT','The middle path',
+  ['A modular monolith: strict internal boundaries, one deploy. Most benefits of services, none of the network tax.','Extract a service only when it needs independent scaling, deployment, or ownership.'],
+  'Modular monolith first; services where independence pays for itself.',
+  {flights:[fl('cl','mono','req',100,500),fl('mono','cl','res',800,500)],metrics:{deploy:8,blast:100,calls:0},focus:['mono'],note:'boundaries in code, not network'}),
+ st('Recap','RECAP','Architecture follows organization',
+  ['Small team → monolith. Many teams → services along team boundaries. Always → owned data per capability.','The goal is independent progress, not microservice count.'],
+  'Split for autonomy, not fashion. Every boundary is a permanent tax.',
+  {metrics:{deploy:8,blast:33,calls:14},flights:[fl('cl','mono','req',100,450),fl('mono','o','req',700,450),fl('o','cl','res',1300,450)],loop:true})
+]),
+L('gateway','API Gateways',7,'Intermediate','One front door for many services.',
+ ['Cross-cutting concerns at the edge','Auth, rate limits, routing in one place','Gateway vs service mesh','Avoiding the gateway bottleneck'],
+ [M('auth','AUTH CHECKS','lock',''),M('routes','ROUTES','branch',''),M('lat','EDGE OVERHEAD','clock')],'gateway',[
+ st('Everywhere','PROBLEM','Auth copied into five services',
+  ['Each service re-implements tokens, rate limits, CORS, logging. Five copies drift; one forgets to check expiry.','Cross-cutting concerns belong at a shared edge.'],
+  'Duplicated edge logic is duplicated security risk.',
+  {add:['cl','a','b','c'],flights:[fl('cl','a','req',100,400),fl('cl','b','req',600,400),fl('cl','c','req',1100,400)],alert:['c'],note:'5 services × 5 concerns = 25 copies'}),
+ st('Front door','CONCEPT','The gateway owns the edge',
+  ['Clients hit one endpoint. The gateway verifies auth, enforces limits, routes <code>/orders</code> → orders svc, aggregates responses.','Services trust the gateway and focus on business logic.'],
+  'Gateway = the single place where policy meets traffic.',
+  {add:['gw'],flights:[fl('cl','gw','req',100,400,'Bearer …'),fl('gw','a','req',700,400,'/orders ✓'),fl('a','gw','res',1200,400),fl('gw','cl','res',1700,400)],metrics:{auth:1,routes:3,lat:4},focus:['gw']}),
+ st('Aggregate','CONCEPT','One call, three services',
+  ['The mobile homepage needs orders + users + search. The gateway fans out and composes one response — saving two round trips over mobile networks.','Keep aggregation thin; heavy composition belongs in a dedicated BFF.'],
+  'Edge aggregation trades gateway work for client round trips.',
+  {flights:[fl('cl','gw','req',100,400,'GET /home'),fl('gw','a','req',600,400),fl('gw','b','req',750,400),fl('gw','c','req',900,400),fl('gw','cl','res',1700,450,'composed')],note:'1 client call → 3 internal'}),
+ st('Mesh','CASE','East-west traffic too?',
+  ['Gateway handles north-south (client→service). Service-to-service (east-west) needs mTLS, retries, tracing — that’s a service mesh’s job.','Don’t route internal chatter through the edge gateway; it becomes a bottleneck and SPOF.'],
+  'Gateway for the edge; mesh for the interior. Different traffic, different tool.',
+  {flights:[fl('a','b','req',100,400,'internal mTLS'),fl('b','a','res',700,400)],metrics:{lat:4},note:'north-south ≠ east-west'}),
+ st('Recap','RECAP','Keep the door thin',
+  ['Auth, limits, routing, coarse aggregation — yes. Business logic — no. Run gateways redundantly and keep them stateless.','A fat gateway becomes the monolith you tried to escape.'],
+  'Centralize policy, not logic. The edge should be boring and fast.',
+  {metrics:{auth:1,routes:3,lat:4},flights:[fl('cl','gw','req',100,350),fl('gw','b','req',600,350),fl('b','gw','res',1100,350),fl('gw','cl','res',1500,350)],loop:true})
+]),
+L('eventdriven','Event-Driven Systems',8,'Advanced','Choreography instead of orchestration.',
+ ['Events as the integration backbone','Choreography vs orchestration','Eventual consistency workflows','The outbox pattern for reliable publishing'],
+ [M('steps','WORKFLOW STEPS','branch',''),M('couple','COUPLING','target','%'),M('lag','END-TO-END','clock')],'events',[
+ st('The saga','PROBLEM','An order spans four services',
+  ['Order → reserve stock → charge → ship. Orchestrated synchronously, any hiccup fails the whole chain and leaves partial state.','You need a workflow that survives partial failure.'],
+  'Multi-service workflows need a failure story for every step.',
+  {add:['ord'],alert:['ord'],note:'4 services, 1 transaction? impossible'}),
+ st('Choreograph','CONCEPT','Each service reacts and emits',
+  ['Orders emits <code>order.created</code>. Inventory reserves and emits <code>stock.reserved</code>. Payments charges and emits <code>payment.captured</code>…','No conductor — each service knows its cue and its line.'],
+  'Choreography: services react to facts and publish new facts.',
+  {add:['bus','inv','pay','shp'],flights:[fl('ord','bus','req',100,400,'order.created'),fl('bus','inv','res',600,400),fl('inv','bus','req',1200,400,'stock.reserved'),fl('bus','pay','res',1700,400),fl('pay','bus','req',2300,400,'payment.captured'),fl('bus','shp','res',2800,400)],metrics:{steps:4,couple:10,lag:3200},focus:['bus']}),
+ st('Compensate','CASE','Payment fails after stock reserved',
+  ['You can’t roll back other services’ databases. Instead, emit <code>payment.failed</code> → inventory releases stock. A compensating action, not a rollback.','Sagas trade atomicity for a sequence of undoable steps.'],
+  'Distributed “rollback” = forward compensating transactions.',
+  {flights:[fl('pay','bus','req',100,400,'payment.failed'),fl('bus','inv','res',700,400),fl('inv','bus','req',1300,400,'stock.released')],alert:['pay'],note:'compensate, don’t rollback'}),
+ st('Outbox','CONCEPT','Write DB and event atomically',
+  ['Crash between DB commit and publish = lost event. Fix: write the event into an outbox table in the same transaction; a relay publishes it.','One atomic write, at-least-once delivery, no dual-write bug.'],
+  'The outbox pattern makes “save + publish” atomic without distributed transactions.',
+  {flights:[fl('ord','bus','req',100,400,'via outbox ✓')],metrics:{couple:10},note:'DB txn: row + outbox → relay → bus'}),
+ st('Recap','RECAP','When to orchestrate instead',
+  ['Choreography shines for loose, evolving flows. Complex branching workflows with timeouts deserve an explicit orchestrator (state machine).','Either way: idempotent handlers, outbox publishing, compensations.'],
+  'Event-driven = eventual workflows. Design the failure paths first.',
+  {metrics:{steps:4,couple:10,lag:3200},flights:[fl('ord','bus','req',100,350),fl('bus','inv','res',550,350),fl('bus','pay','res',700,350),fl('bus','shp','res',850,350)],loop:true})
+]),
+L('idempotency','Designing for Idempotency',7,'Intermediate','Making “do it twice” safe — the foundation of reliable retries.',
+ ['Why networks force duplicates','Idempotency keys for writes','Natural vs synthetic idempotency','Exactly-once is a lie (and what to do instead)'],
+ [M('dupes','DUPLICATE RATE','replay','%'),M('keys','KEY LOOKUPS','lock',''),M('safe','SAFE RETRIES','check','%')],'idem',[
+ st('The double charge','PROBLEM','Client retries a timed-out payment',
+  ['The charge succeeded but the response was lost. Client retries. Customer charged twice.','Timeouts are ambiguous: you can’t know if the write landed.'],
+  'On a network, “no response” ≠ “no effect”. Retries create duplicates.',
+  {add:['cl','api'],flights:[fl('cl','api','req',100,500,'charge $50'),fl('cl','api','req',1200,500,'retry $50'),fl('api','cl','res',1900,500,'charged ×2 ✗')],metrics:{dupes:4,safe:0},alert:['api'],note:'lost ack → duplicate charge'}),
+ st('Keys','CONCEPT','Name the intent, dedupe the effect',
+  ['Client sends <code>Idempotency-Key: abc123</code>. Server stores key → result atomically with the charge. Same key again? Return the stored result.','The retry becomes a read.'],
+  'Idempotency keys turn ambiguous retries into safe lookups.',
+  {add:['db'],flights:[fl('cl','api','req',100,450,'charge · key abc'),fl('api','db','req',700,400,'store key+result'),fl('cl','api','req',1500,450,'retry · key abc'),fl('api','db','req',2100,350,'lookup'),fl('db','api','res',2550,350,'same result'),fl('api','cl','res',3000,400,'charged ×1 ✓')],metrics:{dupes:0,keys:1,safe:100},focus:['db']}),
+ st('Natural','CONCEPT','Some operations are born idempotent',
+  ['<code>SET status=’paid’</code> is naturally idempotent; <code>balance += 50</code> is not. Prefer absolute writes over deltas where possible.','PUT and DELETE are idempotent by HTTP contract; POST is not — hence keys.'],
+  'Design state changes as “set to X”, not “add X”, when you can.',
+  {flights:[fl('cl','api','req',100,400,'PUT status=paid'),fl('cl','api','req',800,400,'PUT status=paid'),fl('api','cl','res',1400,400,'same state ✓')],metrics:{safe:100},loop:true,note:'absolute > relative writes'}),
+ st('Exactly-once','CASE','The marketing term',
+  ['“Exactly-once delivery” is impossible over networks. What exists: at-least-once delivery + idempotent processing = exactly-once effect.','Kafka’s “exactly-once” is this trick inside its own boundaries.'],
+  'Aim for exactly-once effects, not exactly-once delivery.',
+  {flights:[fl('cl','api','req',100,400,'msg'),fl('cl','api','req',600,400,'msg (dup)'),fl('api','db','req',1200,350,'dedupe'),fl('api','cl','res',1700,400,'effect ×1')],loop:true,note:'deliver ≥1 · process =1'}),
+ st('Recap','RECAP','Make every write retryable',
+  ['Keys for payments and orders, natural idempotency for state, dedupe tables for consumers. Then retries, queues, and failover all become safe.','Idempotency is the precondition for every reliability pattern you’ve learned.'],
+  'If retrying it could hurt, it isn’t finished being designed.',
+  {metrics:{dupes:0,keys:1,safe:100},flights:[fl('cl','api','req',100,400,'key abc'),fl('api','db','req',600,350),fl('db','api','res',1100,350),fl('api','cl','res',1500,400)],loop:true})
+])]},
+{num:'07',title:'Security',color:'#e0447c',lessons:[
+L('tls','TLS Everywhere',7,'Beginner','Encrypting the conversation you learned to trace in lesson 1.',
+ ['What TLS protects: confidentiality, integrity, identity','The handshake and certificate chain','TLS 1.3’s faster setup','Termination points and internal mTLS'],
+ [M('hs','HANDSHAKE','swap','RTT'),M('enc','ENCRYPTED','lock','%'),M('verify','CERT CHECK','shield','')],'tls',[
+ st('Plaintext','PROBLEM','Anyone on the path can read',
+  ['Plain HTTP crosses dozens of routers. Any hop can read passwords, inject ads, or impersonate the shop.','The request conversation from lesson 1 is public by default.'],
+  'Without TLS, the network is an untrusted room full of strangers.',
+  {add:['cl','srv'],flights:[fl('cl','srv','req',200,800,'password=hunter2')],alert:['cl'],metrics:{enc:0},note:'every hop can read this'}),
+ st('Handshake','CONCEPT','Prove identity, agree on keys',
+  ['Server presents a certificate signed by a trusted CA. Client verifies the chain, then both derive session keys. TLS 1.3 does it in 1 RTT.','Now eavesdroppers see ciphertext; tampering is detected.'],
+  'TLS = authenticated key exchange, then encrypted transport.',
+  {add:['ca'],flights:[fl('cl','srv','hs',100,600,'ClientHello'),fl('srv','cl','hs',800,600,'cert + key share'),fl('cl','ca','hs',1500,500,'verify chain'),fl('ca','cl','hs',2100,500,'trusted ✓'),fl('cl','srv','req',2800,600,'🔒 encrypted')],metrics:{hs:1,enc:100,verify:1},focus:['ca'],note:'TLS 1.3: 1-RTT setup'}),
+ st('Terminate','CONCEPT','Where does encryption end?',
+  ['TLS usually terminates at the LB/gateway; internal hops were plaintext. Zero-trust says: encrypt inside too (mTLS).','Know your termination points — each is a place bytes are readable.'],
+  'Encryption is only as strong as its weakest plaintext hop.',
+  {flights:[fl('cl','srv','req',100,600,'🔒 public'),fl('srv','cl','res',900,600,'🔒')],metrics:{enc:100},note:'edge TLS · internal mTLS'}),
+ st('mTLS','CASE','Services authenticate each other',
+  ['In a mesh, both sides present certs: orders svc proves it’s orders, not an intruder with network access.','Identity per workload, rotated automatically — not one shared secret.'],
+  'mTLS gives every service a cryptographic identity.',
+  {flights:[fl('cl','srv','hs',100,500,'client cert'),fl('srv','cl','hs',700,500,'server cert'),fl('cl','srv','req',1400,500,'mutual ✓')],metrics:{verify:2},loop:true}),
+ st('Recap','RECAP','TLS is table stakes',
+  ['HTTPS everywhere, HSTS, modern ciphers, certs auto-renewed, internal mTLS where trust is zero.','It protects the conversation; auth (next lesson) protects the resources.'],
+  'Encrypt the wire, verify the identity, then talk.',
+  {metrics:{hs:1,enc:100,verify:2},flights:[fl('cl','srv','hs',100,450),fl('srv','cl','hs',650,450),fl('cl','srv','req',1300,500,'🔒')],loop:true})
+]),
+L('auth','AuthN vs AuthZ',7,'Beginner','Who you are vs what you may do — two different systems.',
+ ['Authentication: sessions, tokens, OIDC','Authorization: roles, policies, ownership','Where checks must live','Common broken-access-control bugs'],
+ [M('authn','AUTHN','user',''),M('authz','AUTHZ CHECKS','lock',''),M('bug','BAC BUGS','target','')],'auth',[
+ st('Two questions','PROBLEM','Logged in ≠ allowed',
+  ['User 42 authenticates fine. Then requests <code>/orders/43</code> — someone else’s order. Identity passed; permission was never checked.','AuthN answers “who?”; AuthZ answers “may they?”.'],
+  'Authentication without authorization is an open door with a name tag.',
+  {add:['u','idp','api'],flights:[fl('u','idp','req',100,500,'login ✓'),fl('u','api','req',900,500,'GET /orders/43'),fl('api','u','res',1600,500,'200 ✗ leak!')],metrics:{authn:1,authz:0,bug:1},alert:['api']}),
+ st('AuthN','CONCEPT','Prove identity once',
+  ['Password + MFA or OIDC provider → session cookie or short-lived JWT. The identity provider owns credentials; your app trusts its assertion.','Don’t build your own crypto or password flows — delegate.'],
+  'Centralize identity; verify assertions at the edge.',
+  {flights:[fl('u','idp','req',100,500,'OIDC'),fl('idp','u','res',800,500,'id_token ✓')],metrics:{authn:1},focus:['idp'],note:'delegate to an IdP'}),
+ st('AuthZ','CONCEPT','Check ownership on every request',
+  ['<code>order.owner == user.id</code>? Role allowed? Policy engines (RBAC/ABAC) centralize rules; handlers enforce them per object.','The #1 web vulnerability is missing object-level checks — not fancy crypto breaks.'],
+  'Authorize every object access, server-side, every time.',
+  {add:['data'],flights:[fl('u','api','req',100,450,'GET /orders/43'),fl('api','data','req',700,400,'owner?'),fl('data','api','res',1200,400,'owner=41'),fl('api','u','res',1700,450,'403 ✓')],metrics:{authz:1,bug:0},focus:['api'],note:'object-level check → 403'}),
+ st('IDOR','CASE','The incremented ID',
+  ['Attacker loops <code>/orders/1…99999</code>. Without ownership checks, they download everyone’s data (IDOR).','UUIDs hide IDs but don’t authorize. Only checks do.'],
+  'Obscurity is not authorization. Check, don’t hide.',
+  {flights:[fl('u','api','req',100,300,'/orders/1'),fl('u','api','req',450,300,'/orders/2'),fl('u','api','req',800,300,'/orders/3'),fl('api','u','res',1300,350,'403 · 403 · 403')],metrics:{authz:3,bug:0},loop:true}),
+ st('Recap','RECAP','Two gates, both mandatory',
+  ['AuthN at the edge via a trusted IdP; AuthZ per object in every handler, default-deny.','Test authorization like a feature — because attackers will.'],
+  'Who are you? What may you touch? Answer both, every request.',
+  {metrics:{authn:1,authz:3,bug:0},flights:[fl('u','idp','req',100,400),fl('idp','u','res',600,400),fl('u','api','req',1200,400),fl('api','u','res',1800,400,'allowed ✓')],loop:true})
+]),
+L('secrets','Secrets & Least Privilege',6,'Intermediate','Keeping keys out of code and permissions out of reach.',
+ ['Why secrets in repos are breaches','Vaults, rotation, and short-lived creds','Least privilege per service','Blast-radius thinking'],
+ [M('leak','LEAKED SECRETS','target',''),M('ttl','CRED TTL','clock','h'),M('scope','PERMISSIONS','lock','%')],'secrets',[
+ st('The commit','PROBLEM','API key in git history',
+  ['A DB password lands in a public repo. Bots find it in minutes. Deleting the file doesn’t delete history — or the copies.','Secrets in code are secrets published.'],
+  'Assume anything committed is compromised forever.',
+  {add:['dev'],alert:['dev'],metrics:{leak:1},note:'bots scan public repos in minutes'}),
+ st('Vault','CONCEPT','Fetch at runtime, rotate centrally',
+  ['Services fetch secrets from a vault at startup (or better: short-lived dynamic creds). Rotate in one place; audit every read.','Env vars injected by the platform beat files; vault beats env files.'],
+  'Centralize secrets; make them short-lived and auditable.',
+  {add:['vault','svc'],flights:[fl('svc','vault','req',200,500,'identity → request'),fl('vault','svc','res',900,500,'cred · TTL 1h')],metrics:{leak:0,ttl:1},focus:['vault']}),
+ st('Least','CONCEPT','Only the permissions needed',
+  ['The thumbnails service needs read on one bucket — not admin on everything. Scope creds per service, per environment.','When it’s compromised, the attacker inherits only its tiny scope.'],
+  'Least privilege converts breaches from catastrophes into incidents.',
+  {flights:[fl('vault','svc','res',200,500,'read:thumbs only')],metrics:{scope:5},note:'read one bucket ≠ admin all'}),
+ st('Blast','CASE','Assume breach, limit radius',
+  ['One service popped. With shared admin creds: total compromise. With scoped, rotating creds: one bucket, one hour.','Design permissions for the day you’re breached, not the day you’re not.'],
+  'Blast radius is a design variable. Minimize it per credential.',
+  {flights:[fl('svc','vault','req',100,400,'expired cred ✗'),fl('vault','svc','res',700,400,'re-auth required')],metrics:{ttl:1,scope:5},loop:true,note:'stolen cred dies in ≤1 h'}),
+ st('Recap','RECAP','The secrets checklist',
+  ['No secrets in repos (scan CI). Vault + rotation + short TTLs. Per-service least privilege. Audit reads.','Security is mostly hygiene done consistently.'],
+  'Short-lived, scoped, centralized secrets shrink every breach.',
+  {metrics:{leak:0,ttl:1,scope:5},flights:[fl('svc','vault','req',100,400),fl('vault','svc','res',600,400,'scoped ✓')],loop:true})
+])]},
+{num:'08',title:'Shipping',color:'#8a9a2b',lessons:[
+L('cicd','CI/CD Pipelines',7,'Beginner','From commit to production without fear.',
+ ['Continuous integration: merge small, test always','Progressive delivery: canary and blue-green','Rollbacks as a first-class feature','Feature flags decouple deploy from release'],
+ [M('freq','DEPLOYS / DAY','up',''),M('lead','LEAD TIME','clock','min'),M('fail','CHANGE FAIL','target','%')],'cicd',[
+ st('Fear','PROBLEM','Deploy Friday? Never.',
+  ['Releases are monthly, manual, and scary. Big batches mean big failures and 2 am rollbacks.','The fix isn’t more caution — it’s smaller, safer, more frequent changes.'],
+  'Deployment pain scales with batch size, not with frequency.',
+  {add:['dev'],alert:['dev'],metrics:{freq:0.03,lead:43200,fail:45},note:'monthly releases · 45% fail'}),
+ st('CI','CONCEPT','Every commit, verified',
+  ['Push → automated build + tests + lint in minutes. Broken main is fixed immediately. Small diffs, reviewed fast.','Integration problems surface while they’re still small.'],
+  'CI turns integration from an event into a habit.',
+  {add:['git','ci'],flights:[fl('dev','git','req',100,450,'push'),fl('git','ci','req',700,450,'build+test'),fl('ci','git','res',1400,450,'✓ green')],metrics:{lead:25},focus:['ci']}),
+ st('CD','CONCEPT','Green means shippable',
+  ['Every green build is deployable. Canary: 1% of traffic first, watch metrics, then 10%, 50%, 100%. Bad canary → auto-rollback.','Progressive delivery makes failure cheap and local.'],
+  'Canary + automatic rollback = deployments that fail safely.',
+  {add:['cd','prod'],flights:[fl('ci','cd','req',100,450,'artifact'),fl('cd','prod','req',700,500,'1% canary'),fl('prod','cd','res',1300,500,'metrics ok'),fl('cd','prod','req',1900,500,'100%')],metrics:{freq:12,fail:4},focus:['cd'],note:'1% → 10% → 50% → 100%'}),
+ st('Flags','CASE','Deploy ≠ release',
+  ['Ship code dark behind a feature flag; enable for internals, then 5%, then everyone. Kill switch without a deploy.','Decoupling deploy from release removes most launch-day risk.'],
+  'Feature flags make releases a dial, not a detonation.',
+  {flights:[fl('cd','prod','req',100,450,'flag: 5%'),fl('cd','prod','req',900,450,'flag: 100%')],metrics:{fail:2},loop:true,note:'dark launch → gradual rollout'}),
+ st('Recap','RECAP','Speed is safety',
+  ['Small batches + CI + canaries + flags + instant rollback = deploy 12×/day with 2% failure instead of monthly with 45%.','Elite teams aren’t braver; their failures are smaller.'],
+  'Make change cheap and reversible, then change often.',
+  {metrics:{freq:12,lead:25,fail:2},flights:[fl('dev','git','req',100,350),fl('git','ci','req',550,350),fl('ci','cd','req',1000,350),fl('cd','prod','req',1450,350)],loop:true})
+]),
+L('observability','Observability: Logs, Metrics, Traces',8,'Intermediate','Three signals that turn “it’s slow” into “here’s why”.',
+ ['Metrics: aggregate health over time','Logs: discrete events with context','Traces: one request across services','SLIs, SLOs, and error budgets'],
+ [M('signals','SIGNALS','chart',''),M('mttr','MTTR','clock','min'),M('slo','SLO','target','%')],'observ',[
+ st('Blind','PROBLEM','“It’s slow” — where?',
+  ['Users report slowness. You have one CPU graph and grep. Is it the DB? A deploy? One region? Guessing begins.','Recall lesson 1: latency lives in specific hops. You need to see them.'],
+  'Without observability, debugging is archaeology.',
+  {add:['svc'],alert:['svc'],metrics:{signals:0,mttr:240},note:'one graph + grep = guessing'}),
+ st('Metrics','CONCEPT','Numbers over time',
+  ['RPS, error rate, p50/p95/p99 latency, saturation — per service, per endpoint. Cheap to store, perfect for alerts and trends.','Averages hide pain; percentiles reveal the users having a bad time.'],
+  'Metrics answer “is it healthy?” — watch tails, not averages.',
+  {add:['met'],flights:[fl('svc','met','res',200,500,'p99=1.8s ⚠')],metrics:{signals:1},focus:['met'],note:'p99 tells the truth'}),
+ st('Logs','CONCEPT','Events with context',
+  ['Structured JSON logs: request id, user, duration, error. Searchable, correlated. Log decisions and failures, not every loop.','High-cardinality context is what turns logs from noise into evidence.'],
+  'Structured logs answer “what exactly happened to this request?”.',
+  {add:['logs'],flights:[fl('svc','logs','res',200,500,'{req:abc, err:timeout}')],metrics:{signals:2},focus:['logs']}),
+ st('Traces','CONCEPT','The request’s journey, timed',
+  ['A trace follows one request across services with a span per hop — exactly lesson 1’s diagram, generated live. The 400 ms DB span glows red.','Traces answer “where did the time go?” without guessing.'],
+  'Distributed traces are lesson 1, automated: every hop, timed.',
+  {add:['tr','dash'],flights:[fl('svc','tr','res',100,450,'spans'),fl('tr','dash','res',700,450),fl('met','dash','res',900,450),fl('logs','dash','res',1100,450)],metrics:{signals:3,mttr:15},focus:['tr'],note:'checkout 1.8s → db span 1.6s'}),
+ st('Recap','RECAP','SLOs make it actionable',
+  ['Define SLIs (p99 < 300 ms, 99.9% success), set SLOs, spend the error budget on velocity. Alert on budget burn, not every blip.','Three signals + one contract = calm on-call and honest roadmaps.'],
+  'Metrics alert, logs explain, traces locate. SLOs decide when to act.',
+  {metrics:{signals:3,mttr:15,slo:99.9},flights:[fl('svc','met','res',100,400),fl('svc','logs','res',300,400),fl('svc','tr','res',500,400),fl('met','dash','res',1100,400)],loop:true})
+])]},
+{num:'09',title:'Whole Systems',color:'#3b5bd6',lessons:[
+L('shortener','Design a URL Shortener',10,'Intermediate','The classic interview — solved with everything you’ve learned.',
+ ['Capacity estimation first','Key generation without collisions','Read-heavy caching strategy','Analytics without slowing redirects'],
+ [M('wqps','WRITE QPS','up',''),M('rqps','READ QPS','download',''),M('lat','REDIRECT','clock')],'short',[
+ st('Requirements','PROBLEM','100M links, 1B redirects/month',
+  ['Write: ~40/s. Read: ~400/s average, 4k peak. Redirects must be < 50 ms. Links live 5 years.','Napkin math says: tiny writes, huge read ratio (100:1), 6 TB storage. One DB + cache handles it.'],
+  'Estimate first: read/write ratio shapes the entire design.',
+  {add:['u','api'],metrics:{wqps:40,rqps:400},focus:['api'],note:'100:1 reads:writes · ~6 TB / 5 yr'}),
+ st('Keys','CONCEPT','Generate, don’t coordinate',
+  ['Base62 of a counter or random 7 chars (62^7 ≈ 3.5T). Check-and-set in DB handles rare collisions. No global lock needed.','Idempotent create: same long URL + user → same key (dedupe table).'],
+  'Random keys + unique constraint beat distributed counters.',
+  {add:['db'],flights:[fl('api','db','req',200,500,'INSERT k7x9 → URL'),fl('db','api','res',900,500,'unique ✓')],metrics:{lat:30},focus:['db'],note:'62^7 ≈ 3.5 trillion keys'}),
+ st('Hot reads','CONCEPT','Cache the viral links',
+  ['A celebrity tweet sends 100k clicks to one key. Redis absorbs it; DB sees a trickle. TTL hours — links rarely change.','This is caching 101 + hit-ratio leverage, applied.'],
+  'Read-heavy + immutable data = cache heaven.',
+  {add:['cache'],flights:[fl('u','api','req',100,350,'GET k7x9'),fl('api','cache','req',550,300),fl('cache','api','res',950,300,'HIT'),fl('api','u','res',1350,350,'301 →')],metrics:{rqps:4000,lat:8},focus:['cache'],loop:true,note:'99% hits → DB ~40 qps'}),
+ st('Analytics','CASE','Count clicks without blocking',
+  ['Redirect path stays minimal. Emit a <code>click</code> event to a queue; workers aggregate asynchronously. Pub/sub + queues, applied.','Never let analytics latency borrow into the redirect.'],
+  'Critical path: lookup + 301. Everything else: async.',
+  {flights:[fl('api','cache','req',100,300,'lookup'),fl('api','u','res',500,300,'301'),fl('api','db','req',1100,500,'click event → queue')],metrics:{lat:8},note:'redirect now, count later'}),
+ st('Recap','RECAP','The whole course in one box',
+  ['LB → stateless API → Redis → DB replica; queue for analytics; CDN for the landing page; SLO p99 < 50 ms.','Every module you learned appears in this “simple” system. That’s the point.'],
+  'Great designs are boring compositions of well-understood parts.',
+  {metrics:{wqps:40,rqps:4000,lat:8},flights:[fl('u','api','req',100,300),fl('api','cache','req',500,280),fl('cache','api','res',880,280),fl('api','u','res',1260,300)],loop:true})
+]),
+L('feed','Design a News Feed',10,'Advanced','Fan-out, caches, and the celebrity problem at social scale.',
+ ['Pull vs push feed generation','Fan-out on write vs on read','Hybrid for celebrities','Ranking as a separate stage'],
+ [M('fans','FOLLOWERS','user','k'),M('fanout','FAN-OUT WRITES','swap','k/s'),M('read','FEED READ','clock')],'feed',[
+ st('Scale','PROBLEM','500M users, 2k followers avg',
+  ['A post must appear in thousands of feeds. Read QPS is 10× write. Feeds must load < 200 ms.','The core question: compute feeds at write time or read time?'],
+  'Feed design is a write-amplification vs read-latency trade.',
+  {add:['post','fan'],metrics:{fans:2},focus:['fan'],note:'500M users · reads 10× writes'}),
+ st('Push','CONCEPT','Fan-out on write',
+  ['Post → workers append the post ID to each follower’s precomputed feed cache. Reads are a single cache fetch: ~5 ms.','Great for normal users. Cost: 2k writes per post.'],
+  'Push makes reads trivial by paying at write time.',
+  {add:['cache','read'],flights:[fl('post','fan','req',100,400,'new post'),fl('fan','cache','req',600,450,'append ×2k'),fl('read','cache','req',1400,300,'GET feed'),fl('cache','read','res',1800,300,'5 ms ✓')],metrics:{fanout:80,read:5},focus:['cache']}),
+ st('Celebrity','CASE','100M followers',
+  ['One post = 100M cache writes. Fan-out lags minutes; the queue melts.','Hybrid: celebrities don’t fan out. Readers merge celebrity posts (pull) with their precomputed feed (push) at read time.'],
+  'Hybrid fan-out: push for the many, pull for the famous.',
+  {flights:[fl('fan','cache','req',100,250),fl('fan','cache','req',300,250),fl('fan','cache','req',500,250),fl('fan','cache','req',700,250)],metrics:{fans:100000,fanout:900},alert:['fan'],loop:true,note:'100M writes per post?!'}),
+ st('Rank','CONCEPT','Retrieve, then rank',
+  ['Feed cache holds candidate IDs (chronological). A ranking service scores them (engagement, recency) at read time — a separate, cacheable stage.','Keep storage chronological; keep ranking a pure function over candidates.'],
+  'Separate candidate retrieval from ranking — they scale differently.',
+  {flights:[fl('read','cache','req',100,300,'candidates'),fl('cache','read','res',500,300,'500 IDs'),fl('read','cache','req',1100,350,'ranked page')],metrics:{read:120},note:'retrieve 500 → rank → top 20'}),
+ st('Recap','RECAP','A feed is a cache strategy',
+  ['Push for regular users, pull for celebrities, rank at read, store IDs not payloads, CDN the media.','Same primitives: queues, caches, fan-out, hybrid paths — composed for the workload.'],
+  'There is no “feed algorithm” — there is a fan-out policy plus a ranker.',
+  {metrics:{fans:2,fanout:80,read:120},flights:[fl('post','fan','req',100,350),fl('fan','cache','req',550,400),fl('read','cache','req',1200,300),fl('cache','read','res',1600,300)],loop:true})
+]),
+L('chat','Design Chat',10,'Advanced','Realtime messaging with history, presence, and groups.',
+ ['WebSocket gateways at scale','Message ordering and IDs','Store-then-forward vs forward-then-store','Group fan-out and read receipts'],
+ [M('conn','CONNECTIONS','swap','M'),M('msg','MSG / S','bolt','k'),M('e2e','DELIVERY','clock')],'chat',[
+ st('Requirements','PROBLEM','50M daily users, messages in < 500 ms',
+  ['1:1 and groups up to 1k. History forever. Presence and typing. Offline users get pushes.','~40k msg/s average, 400k peak. 1M concurrent sockets per gateway cluster.'],
+  'Chat = realtime transport + durable log + presence, three systems in a trench coat.',
+  {add:['ana','ws'],metrics:{conn:1,msg:40},focus:['ws'],note:'50M DAU · <500 ms delivery'}),
+ st('Path','CONCEPT','Persist, then push',
+  ['Ana → gateway → message service: assign ID (snowflake: time-ordered), write to store, then push to Ben’s gateway.','Store-first means history and delivery can’t disagree.'],
+  'Durability before delivery: the log is the truth, sockets are notifications.',
+  {add:['ben','store'],flights:[fl('ana','ws','req',100,350,'“hey”'),fl('ws','store','req',550,400,'id+persist'),fl('store','ws','res',1050,400,'ack'),fl('ws','ben','res',1550,350,'push'),fl('ws','ana','res',1750,350,'✓✓')],metrics:{e2e:180},focus:['store']}),
+ st('Offline','CASE','Ben is on a plane',
+  ['Push fails → queue a mobile notification. On reconnect, Ben syncs from his last-seen message ID — the store replays the gap.','Per-user cursors make reconnection a read, not a mystery.'],
+  'Sync by cursor: clients ask “everything after ID X”.',
+  {flights:[fl('ws','store','req',100,400,'since id 812'),fl('store','ws','res',700,450,'14 missed'),fl('ws','ben','res',1300,350,'deliver')],metrics:{e2e:180},note:'reconnect → cursor sync'}),
+ st('Groups','CONCEPT','Fan-out: write once or per-member?',
+  ['Small groups: write to each member’s inbox (push). Huge groups: one shared timeline, members pull.','The feed lesson’s hybrid, again — inbox tables vs shared logs.'],
+  'Group chat is the fan-out trade wearing a different hat.',
+  {add:['pres'],flights:[fl('ws','pres','req',100,300,'online?'),fl('pres','ws','res',500,300,'3 online'),fl('ws','ben','res',900,350,'group msg')],metrics:{msg:400},note:'small: per-inbox · huge: shared log'}),
+ st('Recap','RECAP','Three stores, one experience',
+  ['Messages in a time-ordered log; presence in TTL memory; sockets at stateless-ish gateways routed by a bus.','Add idempotent sends, cursor sync, and hybrid fan-out — chat is solved with course primitives.'],
+  'Chat looks magical; underneath it’s queues, logs, caches, and sockets.',
+  {metrics:{conn:1,msg:400,e2e:180},flights:[fl('ana','ws','req',100,300),fl('ws','store','req',500,350),fl('ws','ben','res',1000,300)],loop:true})
+]),
+L('ratelimiter','Design a Rate Limiter',9,'Advanced','A tiny system that protects every other system.',
+ ['Algorithm choice: token bucket','Distributed counters in Redis','Atomicity with Lua','Fail-open vs fail-closed'],
+ [M('limit','LIMIT','funnel','rps'),M('check','CHECK COST','clock'),M('sync','SYNC ERROR','target','%')],'ratelimit',[
+ st('Requirements','PROBLEM','1M users, limits per user + IP + endpoint',
+  ['“100 req/min per user, 10 req/s per IP.” Checks must add < 2 ms and survive gateway restarts.','Local counters fail: 10 gateways × 100 = 1000 effective limit. State must be shared.'],
+  'Distributed limiting needs shared state — and shared state needs atomicity.',
+  {add:['cl','lim'],metrics:{limit:100},focus:['lim'],note:'10 gateways × local 100 = 1000?!'}),
+ st('Bucket','CONCEPT','Token bucket in Redis',
+  ['Per key: {tokens, last_refill}. On request: refill by elapsed × rate, cap at burst, spend 1 or reject.','One hash per key; TTL cleans up idle users automatically.'],
+  'Token bucket = two numbers and a timestamp. Tiny state, rich behavior.',
+  {add:['redis'],flights:[fl('cl','lim','req',100,300),fl('lim','redis','req',500,300,'refill+spend'),fl('redis','lim','res',900,300,'tokens 42'),fl('lim','cl','res',1300,300,'allow ✓')],metrics:{check:1},focus:['redis']}),
+ st('Atomic','CASE','The race between gateways',
+  ['Two gateways read tokens=1 simultaneously; both allow. Limit exceeded. Fix: a Lua script does read-refill-spend atomically in Redis.','One round trip, zero races.'],
+  'Check-and-decrement must be atomic — script it, don’t split it.',
+  {flights:[fl('lim','redis','req',100,300,'EVAL lua'),fl('redis','lim','res',500,300,'atomic ✓'),fl('lim','redis','req',900,300,'EVAL lua'),fl('redis','lim','res',1300,300,'0 → reject')],metrics:{sync:0,check:1},loop:true,note:'Lua: refill + spend in one step'}),
+ st('Fail','CASE','Redis is down',
+  ['Fail-open: allow traffic (availability first, risk abuse). Fail-closed: reject (safety first, risk outage).','Most public APIs fail-open with local emergency limits; payment rails fail-closed. Decide per endpoint.'],
+  'A limiter’s failure mode is a business decision, not a default.',
+  {flights:[fl('lim','redis','req',100,400,'timeout'),fl('lim','cl','res',700,300,'allow (local cap)')],alert:['redis'],metrics:{check:0},note:'fail-open + local fallback'}),
+ st('Recap','RECAP','Small system, big leverage',
+  ['Token bucket + Redis Lua + TTL keys + chosen failure mode + 429/Retry-After headers.','You just designed the component that protects every system in this course.'],
+  'The best infrastructure is tiny, atomic, and explicit about failure.',
+  {metrics:{limit:100,check:1,sync:0},flights:[fl('cl','lim','req',100,280),fl('lim','redis','req',480,280),fl('redis','lim','res',860,280),fl('lim','cl','res',1240,280)],loop:true})
+])]}
+];
+
+/* ================================================================
+   STATE
+================================================================ */
+const ALL=MODULES.flatMap(m=>m.lessons.map(l=>({...l,module:m})));
+const byId=Object.fromEntries(ALL.map(l=>[l.id,l]));
+const store={
+  load(){try{return JSON.parse(localStorage.getItem('dts.v1'))||{}}catch(e){return{}}},
+  save(){try{localStorage.setItem('dts.v1',JSON.stringify({done:[...done],learn,last:cur.id}))}catch(e){}}
+};
+const saved=store.load();
+const done=new Set(saved.done||[]);
+const learn=saved.learn||{};
+let cur=byId[saved.last]&&byId[saved.last]?byId[saved.last]:ALL[0];
+let step=0, finishedView=false;
+let visible=new Set(), metricVals={}, metricTweens={}, flights=[], animT=0, playing=true, lastFrame=performance.now(), cycleLen=0;
+let sceneNodes={}, edgeEls={}, pktLayer=null, noteTimer=null;
+
+/* ================================================================
+   DOM refs
+================================================================ */
+const $=id=>document.getElementById(id);
+const tree=$('tree'),metricsEl=$('metrics'),scene=$('scene'),stage=$('stage'),noteEl=$('note'),
+ tl=$('tl'),tlCount=$('tlCount'),crumb=$('crumb'),lessonTitle=$('lessonTitle'),lessonSub=$('lessonSub'),badges=$('badges'),
+ stepCount=$('stepCount'),kindEl=$('kind'),stepTitle=$('stepTitle'),stepBody=$('stepBody'),kiText=$('kiText'),
+ backBtn=$('backBtn'),nextBtn=$('nextBtn'),learnEl=$('learn'),replayBtn=$('replayBtn'),pauseBtn=$('pauseBtn'),
+ progBtn=$('progBtn'),progPop=$('progPop'),progCount=$('progCount'),toastEl=$('toast'),
+ sidebar=$('sidebar'),scrim=$('scrim'),menuBtn=$('menuBtn'),tbCount=$('tbCount');
+
+$('courseIcon').innerHTML=folderIcon('#7a5c3e',17);
+$('progChev').innerHTML=icon('chev',12);
+$('kiIcon').innerHTML=icon('spark',15);
+menuBtn.innerHTML=icon('menu',17);
+$('tbTitle').innerHTML=folderIcon('#7a5c3e',15)+' Course';
+replayBtn.innerHTML=icon('replay',13)+' Replay';
+pauseBtn.innerHTML=icon('pause',13)+' Pause';
+
+/* ================================================================
+   SIDEBAR
+================================================================ */
+function buildTree(){
+  tree.innerHTML='';
+  MODULES.forEach(m=>{
+    const mod=document.createElement('div');mod.className='mod';mod.dataset.num=m.num;
+    const doneCt=m.lessons.filter(l=>done.has(l.id)).length;
+    const head=document.createElement('button');head.className='mod-head';head.setAttribute('aria-expanded','false');
+    head.innerHTML=`<span class="chev">${icon('chev',11)}</span>${folderIcon(m.color)}<span>${m.num}. ${m.title}</span><span class="mcount">${doneCt}/${m.lessons.length}</span>`;
+    const list=document.createElement('div');list.className='lessons';
+    m.lessons.forEach(l=>{
+      const b=document.createElement('button');b.className='lesson-btn';b.dataset.id=l.id;
+      b.innerHTML=`<span class="lic">${icon('doc',13)}</span><span class="lt">${l.title}</span>`;
+      b.addEventListener('click',()=>{loadLesson(l.id);closeSidebar();});
+      list.appendChild(b);
+    });
+    head.addEventListener('click',()=>{mod.classList.toggle('open');head.setAttribute('aria-expanded',mod.classList.contains('open'));});
+    mod.append(head,list);tree.appendChild(mod);
+  });
+  refreshTree();
+}
+function refreshTree(){
+  document.querySelectorAll('.mod').forEach(mod=>{
+    const m=MODULES.find(x=>x.num===mod.dataset.num);
+    const doneCt=m.lessons.filter(l=>done.has(l.id)).length;
+    mod.querySelector('.mcount').textContent=`${doneCt}/${m.lessons.length}`;
+    if(m.lessons.some(l=>l.id===cur.id))mod.classList.add('open');
+    mod.querySelectorAll('.lesson-btn').forEach(b=>{
+      const id=b.dataset.id;
+      b.classList.toggle('active',id===cur.id);
+      b.classList.toggle('done',done.has(id));
+      b.querySelector('.lic').innerHTML=done.has(id)?icon('checkc',13):(id===cur.id?icon('checkc',13):icon('doc',13));
+    });
+  });
+  const ct=`${done.size} / ${ALL.length}`;
+  progCount.textContent=ct;tbCount.textContent=ct;
+}
+
+/* progress popover */
+function renderProgPop(){
+  const pct=Math.round(done.size/ALL.length*100);
+  progPop.innerHTML=`<h4>COURSE PROGRESS</h4><div class="big">${pct}% <span>· ${done.size} of ${ALL.length} lessons</span></div>`+
+   MODULES.map(m=>{const d=m.lessons.filter(l=>done.has(l.id)).length;
+     return `<div class="pp-row"><span class="nm">${m.num}. ${m.title}</span><span class="pp-bar"><i style="width:${d/m.lessons.length*100}%"></i></span><span class="ct">${d}/${m.lessons.length}</span></div>`}).join('')+
+   `<button class="pp-reset" id="resetBtn">Reset all progress</button>`;
+  $('resetBtn').addEventListener('click',()=>{
+    if(confirm('Reset all course progress?')){done.clear();for(const k in learn)delete learn[k];store.save();refreshTree();renderProgPop();renderLearn();toast('Progress reset');}
+  });
+}
+progBtn.addEventListener('click',e=>{
+  e.stopPropagation();
+  const on=progPop.classList.toggle('on');
+  progBtn.setAttribute('aria-expanded',on);
+  if(on)renderProgPop();
+});
+document.addEventListener('click',e=>{
+  if(!progPop.contains(e.target)&&e.target!==progBtn){progPop.classList.remove('on');progBtn.setAttribute('aria-expanded','false');}
+});
+
+/* mobile sidebar */
+function closeSidebar(){sidebar.classList.remove('open');scrim.classList.remove('on');}
+menuBtn.addEventListener('click',()=>{sidebar.classList.add('open');scrim.classList.add('on');});
+scrim.addEventListener('click',closeSidebar);
+
+/* ================================================================
+   SCENE BUILD
+================================================================ */
+function anchor(nd){return nd.type==='pill'?{x:nd.x,y:nd.y}:{x:nd.x,y:nd.y-22};}
+function edgeKey(a,b){return [a,b].sort().join('|');}
+function buildScene(){
+  const sc=SCENES[cur.scene];
+  sceneNodes={};edgeEls={};
+  const pairs=new Set(sc.edges.map(e=>edgeKey(e[0],e[1])));
+  cur.steps.forEach(s=>(s.flights||[]).forEach(f=>pairs.add(edgeKey(f.a,f.b))));
+  const nodesById=Object.fromEntries(sc.nodes.map(nd=>[nd.id,nd]));
+  let defs=`<defs><linearGradient id="screenGrad" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#c9b8f5"/><stop offset="1" stop-color="#8f7ae8"/></linearGradient></defs>`;
+  let edgeSvg='',nodeSvg='';
+  let i=0;
+  pairs.forEach(k=>{
+    const [a,b]=k.split('|');const na=nodesById[a],nb=nodesById[b];if(!na||!nb)return;
+    const p1=anchor(na),p2=anchor(nb);
+    const mx=(p1.x+p2.x)/2,my=(p1.y+p2.y)/2;
+    const dx=p2.x-p1.x,dy=p2.y-p1.y,len=Math.hypot(dx,dy)||1;
+    const bow=(i++%2?1:-1)*Math.min(26,len*.12);
+    const cx=mx-dy/len*bow,cy=my+dx/len*bow;
+    edgeSvg+=`<path class="edge" data-edge="${k}" d="M${p1.x},${p1.y} Q${cx},${cy} ${p2.x},${p2.y}"/>`;
+  });
+  sc.nodes.forEach(nd=>{
+    const art=nd.type==='pill'?pillArt(nd.label,nd.icn):`<g class="art"><g class="bumpable">${(ART[nd.type]||ART.service)()}</g></g>${nd.label?labelPill(nd.label):''}`;
+    nodeSvg+=`<g class="node" data-node="${nd.id}" transform="translate(${nd.x},${nd.y})">
+      <ellipse class="ring" cx="0" cy="${nd.type==='pill'?0:16}" rx="${nd.type==='laptop'?120:48}" ry="${nd.type==='laptop'?30:15}"/>
+      <g class="float">${art}</g></g>`;
+  });
+  scene.innerHTML=defs+`<g id="edges">${edgeSvg}</g><g id="nodes">${nodeSvg}</g><g id="pkts"></g>`;
+  pktLayer=scene.querySelector('#pkts');
+  scene.querySelectorAll('.node').forEach(el=>sceneNodes[el.dataset.node]=el);
+  scene.querySelectorAll('.edge').forEach(el=>edgeEls[el.dataset.edge]=el);
+}
+
+/* ================================================================
+   STEP ENGINE
+================================================================ */
+function computeVisible(upto){
+  const set=new Set();
+  for(let i=0;i<=upto;i++){
+    const s=cur.steps[i];
+    (s.add||[]).forEach(id=>set.add(id));
+    (s.remove||[]).forEach(id=>set.delete(id));
+  }
+  return set;
+}
+function fmt(v,unit){
+  if(v==null)return '—';
+  const r=Math.abs(v)>=100?Math.round(v):(Math.round(v*10)/10);
+  return `${r}<small>${unit}</small>`;
+}
+function renderMetrics(){
+  metricsEl.innerHTML=cur.metrics.map(m=>`<div class="metric" data-m="${m.id}">
+    <div class="ml">${icon(m.icn,10)} ${m.label}</div><div class="mv" id="mv-${m.id}">—</div></div>`).join('');
+}
+function applyStep(){
+  const s=cur.steps[step];
+  visible=computeVisible(step);
+  Object.entries(sceneNodes).forEach(([id,el])=>{
+    el.classList.toggle('on',visible.has(id));
+    el.classList.toggle('focus',(s.focus||[]).includes(id));
+    el.classList.toggle('alert',(s.alert||[]).includes(id));
+    el.classList.remove('bump');
+  });
+  Object.entries(edgeEls).forEach(([k,el])=>{
+    const [a,b]=k.split('|');el.classList.toggle('on',visible.has(a)&&visible.has(b));
+  });
+  /* note */
+  if(s.note){noteEl.textContent=s.note;noteEl.classList.remove('hidden');}
+  else noteEl.classList.add('hidden');
+  /* metrics targets */
+  const targets=s.metrics||{};
+  cur.metrics.forEach(m=>{
+    if(targets[m.id]!==undefined){
+      const from=metricVals[m.id]??0;
+      metricTweens[m.id]={from,to:targets[m.id],t0:animT+150,dur:750,unit:m.unit};
+      metricVals[m.id]=targets[m.id];
+      document.querySelector(`.metric[data-m="${m.id}"]`)?.classList.add('hot');
+    }
+  });
+  /* flights */
+  pktLayer.innerHTML='';
+  flights=(s.flights||[]).map(f=>{
+    const path=edgeEls[edgeKey(f.a,f.b)];
+    if(!path)return null;
+    const rev=edgeKey(f.a,f.b).split('|')[0]!==f.a;
+    const g=document.createElementNS('http://www.w3.org/2000/svg','g');
+    const colors={req:'#e07b39',res:'#4f9d5d',hs:'#fffdf4'};
+    g.innerHTML=`<circle r="6.5" fill="${colors[f.kind]||colors.req}" stroke="#26251f" stroke-width="1.6" ${f.kind==='hs'?'stroke-dasharray="3 2.5"':''}/>${f.label?`<text class="pkt-label" y="-12" text-anchor="middle">${f.label}</text>`:''}`;
+    g.style.opacity='0';pktLayer.appendChild(g);
+    return {...f,path,rev,len:path.getTotalLength(),el:g,arrived:false};
+  }).filter(Boolean);
+  cycleLen=flights.length?Math.max(...flights.map(f=>f.delay+f.dur))+700:0;
+  animT=0;playing=true;syncPauseBtn();
+  /* right panel */
+  stepCount.textContent=`STEP ${step+1} / ${cur.steps.length}`;
+  kindEl.textContent=s.kind;kindEl.className='kind '+s.kind;
+  stepTitle.textContent=s.title;
+  stepBody.innerHTML=s.body.map(p=>`<p>${p}</p>`).join('');
+  kiText.textContent=s.key;
+  const ki=$('keyidea');ki.style.animation='none';void ki.offsetWidth;ki.style.animation='';
+  /* nav */
+  backBtn.disabled=step===0;
+  backBtn.innerHTML=icon('left',13)+' Back';
+  updateNextBtn();
+  /* timeline */
+  tlCount.textContent=`Step ${step+1} of ${cur.steps.length}`;
+  tl.querySelectorAll('.tstep').forEach((el,i)=>{
+    el.classList.toggle('cur',i===step);el.classList.toggle('past',i<step);
+  });
+  tl.querySelector('.tl-progress').style.width=(step/(cur.steps.length-1)*100)+'%';
+}
+function updateNextBtn(){
+  const last=step===cur.steps.length-1;
+  nextBtn.classList.toggle('finish',last&&!done.has(cur.id));
+  if(last&&finishedView){
+    const idx=ALL.findIndex(l=>l.id===cur.id);
+    const nxt=ALL[idx+1];
+    nextBtn.innerHTML=nxt?`Next lesson: ${nxt.title} `+icon('right',13):'Course complete 🎉';
+    nextBtn.disabled=!nxt;
+  }else if(last){
+    nextBtn.innerHTML='Finish lesson '+icon('check',13);
+    nextBtn.disabled=false;
+  }else{
+    nextBtn.innerHTML=`Next: ${cur.steps[step+1].name} `+icon('right',13);
+    nextBtn.disabled=false;
+  }
+}
+function go(i){
+  step=Math.max(0,Math.min(cur.steps.length-1,i));
+  finishedView=false;
+  applyStep();
+}
+function next(){
+  if(step<cur.steps.length-1){go(step+1);return;}
+  if(!finishedView){completeLesson();return;}
+  const idx=ALL.findIndex(l=>l.id===cur.id);
+  if(ALL[idx+1])loadLesson(ALL[idx+1].id);
+}
+function completeLesson(){
+  finishedView=true;
+  const first=!done.has(cur.id);
+  done.add(cur.id);
+  learn[cur.id]=cur.learn.map(()=>true);
+  store.save();refreshTree();renderLearn();updateNextBtn();
+  if(first){confetti();toast('Lesson complete — nice work! ✓');}
+  else toast('Lesson already completed ✓');
+}
+backBtn.addEventListener('click',()=>go(step-1));
+nextBtn.addEventListener('click',next);
+
+/* ================================================================
+   ANIMATION LOOP
+================================================================ */
+const ease=t=>t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2;
+function frame(now){
+  const dt=Math.min(50,now-lastFrame);lastFrame=now;
+  if(playing)animT+=dt;
+  const loop=cur.steps[step].loop&&cycleLen>0;
+  const t=loop?(animT%cycleLen):animT;
+  if(loop&&animT>0&&t<dt)flights.forEach(f=>{f.arrived=false;f.el.style.opacity='0';});
+  flights.forEach(f=>{
+    const p=(t-f.delay)/f.dur;
+    if(p<0){f.el.style.opacity='0';return;}
+    if(p>=1){
+      if(!f.arrived){
+        f.arrived=true;
+        const target=sceneNodes[f.b];
+        if(target){target.classList.remove('bump');void target.getBoundingClientRect();target.classList.add('bump');}
+      }
+      const fade=Math.max(0,1-(t-f.delay-f.dur)/260);
+      f.el.style.opacity=fade;
+      if(fade<=0)return;
+      const pt=f.path.getPointAtLength(f.len);
+      f.el.setAttribute('transform',`translate(${pt.x},${pt.y})`);
+      return;
+    }
+    f.el.style.opacity=Math.min(1,p*6);
+    const d=(f.rev?1-ease(p):ease(p))*f.len;
+    const pt=f.path.getPointAtLength(d);
+    f.el.setAttribute('transform',`translate(${pt.x},${pt.y})`);
+  });
+  /* metric tweens */
+  Object.entries(metricTweens).forEach(([id,tw])=>{
+    const p=Math.max(0,Math.min(1,(animT-tw.t0)/tw.dur));
+    const v=tw.from+(tw.to-tw.from)*ease(p);
+    const el=$('mv-'+id);if(el)el.innerHTML=fmt(v,tw.unit);
+  });
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+function syncPauseBtn(){
+  pauseBtn.innerHTML=(playing?icon('pause',13)+' Pause':icon('play',13)+' Play');
+  pauseBtn.setAttribute('aria-pressed',String(!playing));
+}
+pauseBtn.addEventListener('click',()=>{playing=!playing;syncPauseBtn();});
+replayBtn.addEventListener('click',()=>{
+  flights.forEach(f=>{f.arrived=false;f.el.style.opacity='0';});
+  Object.entries(metricTweens).forEach(([id,tw])=>{tw.t0=150;tw.from=0;});
+  animT=0;playing=true;syncPauseBtn();
+});
+
+/* ================================================================
+   TIMELINE / LEARN / HEADER
+================================================================ */
+function buildTimeline(){
+  tl.innerHTML=`<div class="tl-progress" style="width:0%"></div>`+cur.steps.map((s,i)=>
+    `<button class="tstep" data-i="${i}" aria-label="Go to step ${i+1}: ${s.name}"><span class="tc">${i+1}</span><span class="tlab">${s.name}</span></button>`).join('');
+  tl.querySelectorAll('.tstep').forEach(b=>b.addEventListener('click',()=>go(+b.dataset.i)));
+}
+function renderLearn(){
+  const checks=learn[cur.id]||cur.learn.map(()=>false);
+  learnEl.innerHTML=cur.learn.map((t,i)=>
+    `<li><label class="learn-item"><input type="checkbox" data-i="${i}" ${checks[i]?'checked':''}><span class="cb">${icon('check',10)}</span><span class="lx">${t}</span></label></li>`).join('');
+  learnEl.querySelectorAll('input').forEach(inp=>inp.addEventListener('change',()=>{
+    const arr=learn[cur.id]||cur.learn.map(()=>false);
+    arr[+inp.dataset.i]=inp.checked;learn[cur.id]=arr;store.save();
+  }));
+}
+function renderHeader(){
+  const m=cur.module;
+  const li=m.lessons.findIndex(l=>l.id===cur.id);
+  crumb.innerHTML=`<b>${m.num}. ${m.title}</b> &nbsp;/&nbsp; Lesson ${li+1} of ${m.lessons.length}`;
+  lessonTitle.textContent=cur.title;
+  lessonSub.textContent=cur.sub;
+  const lvlCls=cur.level==='Intermediate'?'int':cur.level==='Advanced'?'adv':'';
+  badges.innerHTML=`<span class="badge time">${icon('clock',11)} ${cur.min} min</span>
+    <span class="badge level ${lvlCls}">${icon('bars',11)} ${cur.level}</span>
+    <span class="badge steps">${icon('list',11)} ${cur.steps.length} steps</span>`;
+}
+
+/* ================================================================
+   LOAD LESSON
+================================================================ */
+function loadLesson(id){
+  cur=byId[id];step=0;finishedView=false;
+  metricVals={};metricTweens={};
+  renderHeader();renderMetrics();buildScene();buildTimeline();renderLearn();
+  applyStep();refreshTree();store.save();
+  document.querySelector('.main').scrollTo({top:0});
+  if(window.innerWidth<=1120)window.scrollTo({top:0,behavior:'smooth'});
+}
+
+/* ================================================================
+   KEYBOARD
+================================================================ */
+document.addEventListener('keydown',e=>{
+  const tag=(e.target.tagName||'').toLowerCase();
+  if(tag==='input'||tag==='textarea')return;
+  if(e.key==='ArrowRight'){e.preventDefault();next();}
+  else if(e.key==='ArrowLeft'){e.preventDefault();if(step>0)go(step-1);}
+  else if(e.key==='r'||e.key==='R'){replayBtn.click();}
+  else if(e.key===' '&&tag!=='button'){e.preventDefault();pauseBtn.click();}
+  else if(e.key==='Escape'){closeSidebar();progPop.classList.remove('on');}
+});
+
+/* ================================================================
+   TOAST + CONFETTI
+================================================================ */
+let toastTimer=null;
+function toast(msg){
+  toastEl.innerHTML=icon('checkc',14)+' '+msg;
+  toastEl.classList.add('on');
+  clearTimeout(toastTimer);toastTimer=setTimeout(()=>toastEl.classList.remove('on'),2600);
+}
+function confetti(){
+  const colors=['#a5d877','#f2c94c','#e07b39','#8f7ae8','#7fb3e8','#eb9a86'];
+  for(let i=0;i<26;i++){
+    const c=document.createElement('div');c.className='confetti';
+    c.style.background=colors[i%colors.length];
+    stage.appendChild(c);
+    const ang=Math.random()*Math.PI*2,dist=90+Math.random()*180;
+    c.animate([
+      {transform:'translate(0,0) rotate(0deg)',opacity:1},
+      {transform:`translate(${Math.cos(ang)*dist}px,${Math.sin(ang)*dist+120}px) rotate(${Math.random()*720-360}deg)`,opacity:0}
+    ],{duration:1100+Math.random()*500,easing:'cubic-bezier(.2,.7,.3,1)'}).onfinish=()=>c.remove();
+  }
+}
+
+/* ================================================================
+   INIT
+================================================================ */
+buildTree();
+loadLesson(cur.id);
+</script>
+</body>
+</html>

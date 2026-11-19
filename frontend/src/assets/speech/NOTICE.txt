@@ -1,0 +1,10 @@
+Browser captions use Vosk-Browser 0.0.8 by Ciaran O'Reilly and contributors.
+https://github.com/ccoreilly/vosk-browser
+
+The bundled vosk-model-small-en-us-0.15 English model is provided by Alpha Cephei.
+https://alphacephei.com/vosk/models
+The model archive was obtained from the Vosk-Browser demonstration distribution.
+https://ccoreilly.github.io/vosk-browser/models/vosk-model-small-en-us-0.15.tar.gz
+
+Vosk-Browser and this model are distributed under the Apache License, Version 2.0.
+See Apache-2.0.txt in this directory.

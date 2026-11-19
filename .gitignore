@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+
+# Whisper.cpp (keep the binary, not source)
+backend/whisper.cpp/
+!backend/whisper.cpp/models/  # keep models if needed
+!backend/whisper.cpp/main     # keep compiled binary if exists
+
+# Frontend (if separate project)
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+backend/dist/
+playwright-report/
+test-results/
+coverage/
+.runtime/
+artifacts/
+
+# Audio files
+*.wav
+!tests/fixtures/spoken-answer.wav
+*.mp3
+uploads/
+audio/
+
+# OS files
+.DS_Store
+*.log
+
+# Environment
+.env
+.env.local
